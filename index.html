@@ -15,7 +15,7 @@ html, body {
 }
 
 /* ============================ */
-/* 인트로 화면 */
+/* 인트로 화면 (새 이미지 사용) */
 /* ============================ */
 #introScreen {
     position:absolute;
@@ -24,25 +24,29 @@ html, body {
     flex-direction:column;
     justify-content:center;
     align-items:center;
-    background:linear-gradient(135deg, #4f46e5, #3b82f6);
-    color:white;
-    text-align:center;
+    background:#000;              /* 이미지 배경 어두운 느낌이면 검정이 잘 어울림 */
+    box-sizing:border-box;
+    padding:20px;
 }
 
-#introScreen h1 {
-    font-size:26px;
-    margin-bottom:20px;
+#introImg {
+    max-width:80%;
+    height:auto;
+    border-radius:20px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.4);
+    margin-bottom:24px;
 }
 
+/* 사진 촬영 버튼 */
 #introBtn {
-    padding:14px 24px;
-    background:white;
-    color:#3b82f6;
-    font-size:18px;
+    padding:12px 26px;
+    background:#3b82f6;
+    color:white;
+    font-size:17px;
     font-weight:600;
     border:none;
-    border-radius:12px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.25);
+    border-radius:999px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.3);
 }
 
 /* ============================ */
@@ -99,7 +103,6 @@ html, body {
     box-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
 
-/* 주소 글씨 작게 */
 #addrBox div {
     font-size:12px;
     margin:2px 0;
@@ -124,10 +127,9 @@ html, body {
     font-weight:500;
 }
 
-/* 실제 사진 촬영 input (후면 카메라 강제) */
-#cameraInput {
-    display:none;
-}
+/* 숨은 카메라 input */
+#cameraInput { display:none; }
+
 </style>
 
 <!-- 라이브러리 -->
@@ -142,8 +144,9 @@ html, body {
 <!-- 인트로 화면 -->
 <!-- ========================= -->
 <div id="introScreen">
-    <h1>📸 사진 GPS 지도앱</h1>
-    <button id="introBtn">사진 촬영하기</button>
+    <!-- 여기 src를 깃허브에 올린 파일명으로 바꿔줘 -->
+    <img id="introImg" src="intro.png" alt="대형폐기물 위치공유 인트로">
+    <button id="introBtn">📸 사진 촬영하기</button>
 </div>
 
 <!-- ========================= -->
@@ -175,16 +178,15 @@ html, body {
 
 </div>
 
-<!-- 후면 카메라 강제 -->
-<input id="cameraInput" type="file" accept="image/*" capture="environment">
+<!-- 후면 카메라 우선 -->
+<input id="cameraInput" type="file" accept="image/*;camera=facing-back" capture="environment">
 
 <script>
-
 let map, marker;
 
-/* 인트로 → 촬영 */
-introBtn.onclick = ()=> cameraInput.click();
-againBtn.onclick = ()=> cameraInput.click();
+/* 인트로/다시 촬영 → 카메라 열기 */
+introBtn.onclick  = () => cameraInput.click();
+againBtn.onclick  = () => cameraInput.click();
 
 /* 지도 표시 */
 function showMap(lat, lon){
@@ -198,7 +200,7 @@ function showMap(lat, lon){
     marker = L.marker([lat, lon]).addTo(map);
 }
 
-/* 주소 변환 (카카오 API) */
+/* 카카오 주소 변환 */
 function fetchAddr(lat, lon){
     fetch(
         `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}&input_coord=WGS84`,
@@ -217,33 +219,34 @@ function fetchAddr(lat, lon){
     });
 }
 
-/* EXIF 처리 */
+/* EXIF로 GPS 읽기 */
 cameraInput.addEventListener("change", e=>{
     const file = e.target.files[0];
     if(!file) return;
 
-    introScreen.style.display = "none";
-    mainScreen.style.display = "block";
-
     photo.src = URL.createObjectURL(file);
 
     EXIF.getData(file, function(){
-        let lat = EXIF.getTag(this,"GPSLatitude");
-        let lon = EXIF.getTag(this,"GPSLongitude");
+        let lat    = EXIF.getTag(this,"GPSLatitude");
+        let lon    = EXIF.getTag(this,"GPSLongitude");
         let latRef = EXIF.getTag(this,"GPSLatitudeRef") || "N";
         let lonRef = EXIF.getTag(this,"GPSLongitudeRef") || "E";
 
         if(!lat || !lon){
-            alert("GPS 정보 없음! 위치정보 ON상태에서 다시 찍어줘.");
+            alert("GPS 정보 없음! 위치정보 ON 상태에서 다시 촬영해주세요.");
             return;
         }
 
+        // 인트로 숨기고 메인 화면 보여주기
+        introScreen.style.display = "none";
+        mainScreen.style.display  = "block";
+
         function toDec(v){ return v[0] + v[1]/60 + v[2]/3600; }
 
-        let latitude = toDec(lat);
+        let latitude  = toDec(lat);
         let longitude = toDec(lon);
 
-        if(latRef==="S") latitude = -latitude;
+        if(latRef==="S") latitude  = -latitude;
         if(lonRef==="W") longitude = -longitude;
 
         showMap(latitude, longitude);
@@ -257,7 +260,6 @@ copyBtn.onclick = ()=>{
     navigator.clipboard.writeText(txt);
     alert("주소 복사됨!");
 };
-
 </script>
 </body>
 </html>
