@@ -1,264 +1,284 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>대형폐기물 위치공유</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>대형폐기물 위치공유</title>
 
-    <style>
-        body, html {
-            margin:0;
-            padding:0;
-            width:100%;
-            height:100%;
-            font-family: Arial, sans-serif;
-            overflow:hidden;
-            background:#fff;
-        }
+<!-- PWA manifest -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3B82F6">
 
-        /* 🔥 인트로 화면 전체 이미지 */
-        #introScreen {
-            position:fixed;
-            top:0;
-            left:0;
-            width:100%;
-            height:100%;
-            background:url('intro.jpg') no-repeat center center;
-            background-size:cover;
-            z-index:9999;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-        }
+<!-- Leaflet 지도 -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-        /* 🔥 인트로 사진촬영 버튼 (반응형 수정 완료) */
-        #introStartBtn {
-            position:absolute;
-            left:50%;
-            transform:translateX(-50%);
+<!-- EXIF (GPS 읽기용) -->
+<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 
-            /* 이미지 비율에 따라 유연하게 위치되게 */
-            bottom:12%;
-
-            width:55%;
-            height:9%;
-
-            background:rgba(0,0,0,0);
-            border:none;
-            cursor:pointer;
-        }
-
-        /* 메인 UI */
-        #mainContainer {
-            width:100%;
-            height:100%;
-            display:none;
-            flex-direction:column;
-        }
-
-        /* 지도 영역 */
-        #map {
-            width:100%;
-            height:60%;
-        }
-
-        /* 주소 + 버튼 라인 */
-        #infoArea {
-            width:100%;
-            height:10%;
-            padding:10px;
-            box-sizing:border-box;
-            font-size:14px;
-        }
-
-        /* 사진 영역 */
-        #photoArea {
-            width:100%;
-            height:30%;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            background:#f5f5f5;
-        }
-
-        #photoPreview {
-            max-width:95%;
-            max-height:95%;
-            border-radius:10px;
-            display:none;
-        }
-
-        /* 버튼 공통 */
-        .btn {
-            padding:8px 14px;
-            border:none;
-            border-radius:8px;
-            background:#3f51b5;
-            color:white;
-            font-size:13px;
-            margin-right:8px;
-        }
-
-        #fileInput {
-            display:none;
-        }
-
-    </style>
-
-    <!-- Leaflet 지도 -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <!-- EXIF -->
-    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
-
-</head>
-<body>
-
-    <!-- 🔥 인트로 화면 -->
-    <div id="introScreen">
-        <button id="introStartBtn"></button>
-    </div>
-
-    <!-- 🔥 메인 화면 -->
-    <div id="mainContainer">
-
-        <!-- 지도 -->
-        <div id="map"></div>
-
-        <!-- 주소 표시 + 버튼 -->
-        <div id="infoArea">
-            <div>도로명: <span id="roadAddr">-</span></div>
-            <div>지번: <span id="jibunAddr">-</span></div>
-
-            <button class="btn" id="copyAddressBtn">주소 복사</button>
-            <button class="btn" id="takePhotoBtn">사진 촬영</button>
-            <button class="btn" id="saveImageBtn">사진 저장</button>
-
-            <input type="file" id="fileInput" accept="image/*" capture="environment">
-        </div>
-
-        <!-- 사진 출력 -->
-        <div id="photoArea">
-            <img id="photoPreview">
-        </div>
-
-    </div>
-
-<script>
-//////////////////////
-// 🔥 인트로 → 메인 화면 전환
-//////////////////////
-document.getElementById("introStartBtn").addEventListener("click", () => {
-    document.getElementById("introScreen").style.display = "none";
-    document.getElementById("mainContainer").style.display = "flex";
-});
-
-
-//////////////////////
-// 지도 초기화
-//////////////////////
-let map = L.map('map').setView([37.5665, 126.9780], 17);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-}).addTo(map);
-
-let marker = null;
-
-
-//////////////////////
-// 주소 변환 함수 (카카오 API)
-//////////////////////
-async function convertToAddress(lat, lng) {
-    const REST_API_KEY = "여기에_너의_카카오_REST_API_KEY_입력";
-
-    let url = `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`;
-    let response = await fetch(url, {
-        headers: { Authorization: `KakaoAK ${REST_API_KEY}` }
-    });
-
-    let json = await response.json();
-    if (json.documents.length > 0) {
-        let addr = json.documents[0].address.address_name;
-        let road = json.documents[0].road_address 
-            ? json.documents[0].road_address.address_name 
-            : "-";
-
-        document.getElementById("roadAddr").innerText = road;
-        document.getElementById("jibunAddr").innerText = addr;
-    }
+<style>
+html, body {
+    margin:0; padding:0;
+    height:100%;
+    font-family:'Pretendard', Arial, sans-serif;
+    background:#f0f2f5;
+    overflow:hidden;
 }
 
+/* ============================
+   인트로 화면 (전체 배경 이미지)
+============================ */
+#introScreen {
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    overflow:hidden;
+    z-index:10;
+}
 
-//////////////////////
-// 사진 촬영 버튼
-//////////////////////
-document.getElementById("takePhotoBtn").addEventListener("click", () => {
-    document.getElementById("fileInput").click();
-});
+#introBg {
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    background-image:url("intro.png");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+}
 
-document.getElementById("fileInput").addEventListener("change", async function(){
-    let file = this.files[0];
-    if (!file) return;
+/* 투명 버튼 (사진촬영 글자 부분 클릭 가능) */
+#introStartBtn {
+    position:absolute;
+    bottom:8vh;
+    left:50%;
+    transform:translateX(-50%);
+    width:60%;
+    height:60px;
+    background:rgba(0,0,0,0);
+    border:none;
+    cursor:pointer;
+    z-index:20;
+}
 
-    let img = document.getElementById("photoPreview");
-    img.src = URL.createObjectURL(file);
-    img.style.display = "block";
+/* ============================
+   메인 화면
+============================ */
+#mainScreen {
+    display:none;
+    width:100%;
+    height:100%;
+}
+
+#topArea {
+    height:60vh;
+    padding:10px;
+    box-sizing:border-box;
+}
+
+.map-card {
+    height:68%;
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+}
+
+#map {
+    width:100%;
+    height:100%;
+}
+
+#addrBox {
+    margin-top:10px;
+    background:#fff;
+    padding:10px 14px;
+    border-radius:12px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
+#addrBox div {
+    font-size:13px;
+    margin:3px 0;
+    font-weight:500;
+    color:#333;
+}
+
+/* 버튼 3개 가로 딱 맞게 */
+.btn-wrap {
+    margin-top:8px;
+    display:flex;
+    gap:6px;
+    width:100%;
+}
+
+.btn {
+    flex:1;
+    padding:7px 0;
+    background:#3B82F6;
+    color:white;
+    border:none;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:600;
+    text-align:center;
+}
+
+/* 사진 영역 */
+#bottomArea {
+    height:40vh;
+    background:#000;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+#photo {
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    background:#000;
+}
+
+/* 카메라 input 숨김 */
+#cameraInput { display:none; }
+</style>
+</head>
+
+<body>
+
+<!-- ============================
+      인트로 화면
+============================ -->
+<div id="introScreen">
+    <div id="introBg"></div>
+    <button id="introStartBtn"></button>
+</div>
+
+<!-- ============================
+      메인 화면
+============================ -->
+<div id="mainScreen">
+
+    <div id="topArea">
+        <div class="map-card">
+            <div id="map"></div>
+        </div>
+
+        <div id="addrBox">
+            <div id="road">도로명: -</div>
+            <div id="jibun">지번: -</div>
+
+            <div class="btn-wrap">
+                <button class="btn" id="copyBtn">주소 복사</button>
+                <button class="btn" id="againBtn">다시 촬영</button>
+                <button class="btn" id="savePhotoBtn">사진 저장</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="bottomArea">
+        <img id="photo">
+    </div>
+
+</div>
+
+<input id="cameraInput" type="file" accept="image/*;camera=facing-back" capture="environment">
+
+<script>
+/* 인트로 버튼 → 카메라 실행 */
+introStartBtn.onclick = () => cameraInput.click();
+againBtn.onclick = () => cameraInput.click();
+
+let map, marker;
+
+/* 지도 표시 */
+function showMap(lat, lon){
+    if(map) map.remove();
+
+    map = L.map('map',{zoomControl:false}).setView([lat, lon], 17);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+        maxZoom:19,
+        crossOrigin:true
+    }).addTo(map);
+
+    marker = L.marker([lat, lon]).addTo(map);
+}
+
+/* 카카오 주소변환 */
+function fetchAddr(lat, lon){
+    fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}&input_coord=WGS84`,{
+        headers:{ "Authorization":"KakaoAK 83aa83329de094b2cf52a2e8a34206fa" }
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        if(!d.documents || d.documents.length===0){
+            road.innerText = "도로명: 없음";
+            jibun.innerText = "지번: 없음";
+            return;
+        }
+        const info = d.documents[0];
+        road.innerText = "도로명: " + (info.road_address?.address_name ?? "없음");
+        jibun.innerText = "지번: " + (info.address?.address_name ?? "없음");
+    });
+}
+
+/* 사진 선택 → GPS → 지도/주소 표시 */
+cameraInput.addEventListener("change", e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+
+    photo.src = URL.createObjectURL(file);
 
     EXIF.getData(file, function(){
-        let lat = EXIF.getTag(this, "GPSLatitude");
-        let lng = EXIF.getTag(this, "GPSLongitude");
-        let latRef = EXIF.getTag(this, "GPSLatitudeRef");
-        let lngRef = EXIF.getTag(this, "GPSLongitudeRef");
+        let lat    = EXIF.getTag(this,"GPSLatitude");
+        let lon    = EXIF.getTag(this,"GPSLongitude");
+        let latRef = EXIF.getTag(this,"GPSLatitudeRef") || "N";
+        let lonRef = EXIF.getTag(this,"GPSLongitudeRef") || "E";
 
-        if(lat && lng){
-            function toDecimal(num){
-                return num[0] + num[1]/60 + num[2]/3600;
-            }
-            let latitude = toDecimal(lat);
-            let longitude = toDecimal(lng);
-
-            if(latRef === "S") latitude *= -1;
-            if(lngRef === "W") longitude *= -1;
-
-            if(marker) map.removeLayer(marker);
-
-            marker = L.marker([latitude, longitude]).addTo(map);
-            map.setView([latitude, longitude], 18);
-
-            convertToAddress(latitude, longitude);
+        if(!lat || !lon){
+            alert("GPS 정보가 없습니다! 위치 정보 허용 상태에서 다시 촬영해주세요.");
+            return;
         }
+
+        introScreen.style.display = "none";
+        mainScreen.style.display  = "block";
+
+        function toDec(v){ return v[0] + v[1]/60 + v[2]/3600; }
+        let latitude  = toDec(lat);
+        let longitude = toDec(lon);
+
+        if(latRef==="S") latitude  = -latitude;
+        if(lonRef==="W") longitude = -longitude;
+
+        showMap(latitude, longitude);
+        fetchAddr(latitude, longitude);
     });
 });
 
+/* 주소 복사 */
+copyBtn.onclick = ()=>{
+    const txt = road.innerText + "\n" + jibun.innerText;
+    navigator.clipboard.writeText(txt);
+    alert("주소 복사됨!");
+};
 
-//////////////////////
-// 주소 복사
-//////////////////////
-document.getElementById("copyAddressBtn").addEventListener("click", () => {
-    let full = 
-        "도로명: " + document.getElementById("roadAddr").innerText +
-        " / 지번: " + document.getElementById("jibunAddr").innerText;
-
-    navigator.clipboard.writeText(full);
-    alert("주소가 복사되었습니다!");
-});
-
-
-//////////////////////
-// 사진 저장 (갤러리 저장)
-//////////////////////
-document.getElementById("saveImageBtn").addEventListener("click", () => {
-    let img = document.getElementById("photoPreview");
-    if (!img.src) return alert("저장할 사진이 없습니다!");
-
-    let link = document.createElement("a");
-    link.href = img.src;
-    link.download = "photo.jpg";
+/* 사진 저장 */
+savePhotoBtn.onclick = () => {
+    if(!photo.src){
+        alert("저장할 사진이 없습니다!");
+        return;
+    }
+    const link = document.createElement("a");
+    link.href = photo.src;
+    link.download = `photo_${Date.now()}.jpg`;
     link.click();
-});
-</script>
+    alert("📥 사진이 저장되었습니다!");
+};
 
+/* PWA service worker 등록 */
+if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("service-worker.js");
+}
+</script>
 </body>
 </html>
