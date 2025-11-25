@@ -4,18 +4,20 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="manifest" href="manifest.json" />
-<title>사진 GPS 지도앱</title>
+<title>사진 GPS 지도앱 (OSM + Kakao 주소)</title>
 
 <style>
-body { margin:0; padding:0; font-family:Arial; background:#f5f5f5; }
+body { margin:0; padding:0; font-family:Arial, sans-serif; background:#f5f5f5; }
 #map { width:100%; height:300px; background:#ddd; }
 #photo { width:100%; margin-top:10px; border-radius:10px; }
-.box { padding:15px; }
+.box { padding:12px 15px; font-size:15px; background:#fff; margin-top:5px; }
+.label { font-weight:bold; margin-bottom:4px; display:block; }
+.addr-line { margin:2px 0; }
 </style>
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
-<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
-<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288661318b4fa69c041aaaed4c3"></script>
 
 </head>
 <body>
@@ -23,8 +25,15 @@ body { margin:0; padding:0; font-family:Arial; background:#f5f5f5; }
 <div id="map">지도를 불러오는 중...</div>
 
 <div class="box">
+  <span class="label">📍 주소</span>
+  <div id="road" class="addr-line">도로명: -</div>
+  <div id="jibun" class="addr-line">지번: -</div>
+</div>
+
+<div class="box">
+  <span class="label">📸 사진 촬영</span>
   <input id="cameraInput" type="file" accept="image/*" capture="camera">
-  <p>📸 카메라 촬영 후 위치 표시</p>
+  <div style="margin-top:5px; color:#666;">카메라로 찍으면 상단에는 지도, 하단에는 사진이 표시됩니다.</div>
 </div>
 
 <img id="photo" />
@@ -33,18 +42,46 @@ body { margin:0; padding:0; font-family:Arial; background:#f5f5f5; }
 let map;
 let marker;
 
-function loadMap(lat, lon){
-    const container = document.getElementById('map');
-    const options = {
-        center: new kakao.maps.LatLng(lat, lon),
-        level: 3
-    };
-    map = new kakao.maps.Map(container, options);
+function showMap(lat, lon){
+    if(map){
+        map.remove();
+    }
 
-    marker = new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(lat, lon)
+    map = L.map('map').setView([lat, lon], 17);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+    }).addTo(map);
+
+    marker = L.marker([lat, lon]).addTo(map);
+}
+
+function fetchKakaoAddress(lat, lon){
+    fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}&input_coord=WGS84`, {
+        headers: {
+            "Authorization": "KakaoAK 83aa83329de094b2cf52a2e8a34206fa"
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(!data.documents || data.documents.length === 0){
+            document.getElementById('road').innerText = "도로명: 찾을 수 없음";
+            document.getElementById('jibun').innerText = "지번: 찾을 수 없음";
+            return;
+        }
+
+        const info = data.documents[0];
+        const roadAddr = info.road_address ? info.road_address.address_name : "없음";
+        const jibunAddr = info.address ? info.address.address_name : "없음";
+
+        document.getElementById('road').innerText = "도로명: " + roadAddr;
+        document.getElementById('jibun').innerText = "지번: " + jibunAddr;
+    })
+    .catch(err => {
+        console.error(err);
+        document.getElementById('road').innerText = "도로명: 오류 발생";
+        document.getElementById('jibun').innerText = "지번: 오류 발생";
     });
-    marker.setMap(map);
 }
 
 document.getElementById("cameraInput").addEventListener("change", function(e){
@@ -60,7 +97,7 @@ document.getElementById("cameraInput").addEventListener("change", function(e){
         let lonRef = EXIF.getTag(this, "GPSLongitudeRef") || "E";
 
         if(!lat || !lon){
-            alert("GPS 정보가 없는 사진입니다.");
+            alert("GPS 정보가 없는 사진입니다. 카메라 위치 정보를 켜고 다시 찍어주세요.");
             return;
         }
 
@@ -73,7 +110,8 @@ document.getElementById("cameraInput").addEventListener("change", function(e){
         if(latRef === "S") latitude = -latitude;
         if(lonRef === "W") longitude = -longitude;
 
-        loadMap(latitude, longitude);
+        showMap(latitude, longitude);
+        fetchKakaoAddress(latitude, longitude);
     });
 });
 

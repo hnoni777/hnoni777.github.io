@@ -1,1 +1,1 @@
-{"name": "\uc0ac\uc9c4 GPS \uc9c0\ub3c4", "short_name": "\uc0ac\uc9c4\uc9c0\ub3c4", "start_url": "index.html", "display": "standalone", "background_color": "#ffffff", "theme_color": "#ffffff", "icons": []}
+{"name": "사진 GPS 지도 (OSM + Kakao 주소)", "short_name": "사진지도", "start_url": "index.html", "display": "standalone", "background_color": "#ffffff", "theme_color": "#ffffff", "icons": []}
