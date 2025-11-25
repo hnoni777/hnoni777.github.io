@@ -145,17 +145,41 @@ cameraInput.addEventListener("change", e=>{
 
 // === 주소 복사 ===
 copyBtn.onclick = ()=>{
-    const txt = road.innerText + "\n" + jibun.innerText;
+    const txt = road.innerText + "\\n" + jibun.innerText;
     navigator.clipboard.writeText(txt);
     alert("주소 복사 완료!");
 };
 
-// === 지도 + 사진 스크린샷 저장 ===
+// === ★ 지도 + 사진 스크린샷 저장 (5:5 비율) ★ ===
 saveShotBtn.onclick = ()=>{
-    html2canvas(document.body).then(canvas=>{
+    const mapEl = document.getElementById("map");
+    const photoEl = document.getElementById("photo");
+
+    if(!photoEl.src){
+        alert("먼저 사진을 찍어주세요.");
+        return;
+    }
+
+    Promise.all([
+        html2canvas(mapEl),
+        html2canvas(photoEl)
+    ]).then(([mapCanvas, photoCanvas])=>{
+        const targetWidth = Math.max(mapCanvas.width, photoCanvas.width);
+        const halfHeight = targetWidth; // 지도/사진 각각 정사각형
+
+        const outCanvas = document.createElement("canvas");
+        outCanvas.width = targetWidth;
+        outCanvas.height = halfHeight * 2;
+        const ctx = outCanvas.getContext("2d");
+
+        // 위쪽: 지도
+        ctx.drawImage(mapCanvas, 0, 0, targetWidth, halfHeight);
+        // 아래쪽: 사진
+        ctx.drawImage(photoCanvas, 0, halfHeight, targetWidth, halfHeight);
+
         const link = document.createElement("a");
         link.download = "map_photo.png";
-        link.href = canvas.toDataURL();
+        link.href = outCanvas.toDataURL("image/png");
         link.click();
     });
 };
