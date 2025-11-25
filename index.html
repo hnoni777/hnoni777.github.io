@@ -4,48 +4,80 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="manifest" href="manifest.json" />
-<title>사진 GPS 지도앱 (OSM + Kakao 주소)</title>
+<title>사진 GPS 지도앱 (풀옵션)</title>
 
+<!-- 스타일 -->
 <style>
-body { margin:0; padding:0; font-family:Arial, sans-serif; background:#f5f5f5; }
-#map { width:100%; height:300px; background:#ddd; }
+body {
+    margin:0; padding:0;
+    font-family:Arial, sans-serif;
+    background:#f5f5f5;
+}
+header {
+    background:#3F51B5;
+    color:white;
+    padding:15px;
+    font-size:20px;
+    text-align:center;
+}
+#map { width:100%; height:300px; }
 #photo { width:100%; margin-top:10px; border-radius:10px; }
-.box { padding:12px 15px; font-size:15px; background:#fff; margin-top:5px; }
-.label { font-weight:bold; margin-bottom:4px; display:block; }
-.addr-line { margin:2px 0; }
+.box { padding:15px; background:white; margin-top:8px; border-radius:10px; }
+.btn {
+    padding:10px 15px; border:none; border-radius:8px;
+    background:#3F51B5; color:white;
+    margin-top:10px; font-size:15px;
+}
+#historyList div {
+    padding:10px; background:#eee; margin-top:5px; border-radius:6px;
+}
 </style>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- OSM / EXIF -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+
+<!-- html2canvas (스크린샷) -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas"></script>
 
 </head>
 <body>
 
-<div id="map">지도를 불러오는 중...</div>
+<header>📸 사진 GPS 지도앱 (풀옵션)</header>
+
+<div id="map"></div>
 
 <div class="box">
-  <span class="label">📍 주소</span>
-  <div id="road" class="addr-line">도로명: -</div>
-  <div id="jibun" class="addr-line">지번: -</div>
+  <div><b>주소 정보</b></div>
+  <div id="road">도로명: -</div>
+  <div id="jibun">지번: -</div>
+  <button class="btn" id="copyBtn">주소 복사</button>
 </div>
 
 <div class="box">
-  <span class="label">📸 사진 촬영</span>
+  <div><b>사진 촬영</b></div>
   <input id="cameraInput" type="file" accept="image/*" capture="camera">
-  <div style="margin-top:5px; color:#666;">카메라로 찍으면 상단에는 지도, 하단에는 사진이 표시됩니다.</div>
 </div>
 
-<img id="photo" />
+<div class="box">
+  <img id="photo">
+  <button class="btn" id="saveShotBtn">지도+사진 저장</button>
+  <button class="btn" id="fullMapBtn">전체 화면 지도로 보기</button>
+</div>
+
+<div class="box">
+  <div><b>📍 촬영 위치 히스토리</b></div>
+  <div id="historyList"></div>
+</div>
 
 <script>
-let map;
-let marker;
+// === 글로벌 변수 ===
+let map, marker, lastLat, lastLon;
 
+// === 지도 표시 ===
 function showMap(lat, lon){
-    if(map){
-        map.remove();
-    }
+    if(map) map.remove();
 
     map = L.map('map').setView([lat, lon], 17);
 
@@ -54,67 +86,115 @@ function showMap(lat, lon){
     }).addTo(map);
 
     marker = L.marker([lat, lon]).addTo(map);
+
+    lastLat = lat;
+    lastLon = lon;
 }
 
+// === 카카오 주소 변환 ===
 function fetchKakaoAddress(lat, lon){
     fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}&input_coord=WGS84`, {
         headers: {
             "Authorization": "KakaoAK 83aa83329de094b2cf52a2e8a34206fa"
         }
     })
-    .then(res => res.json())
-    .then(data => {
-        if(!data.documents || data.documents.length === 0){
-            document.getElementById('road').innerText = "도로명: 찾을 수 없음";
-            document.getElementById('jibun').innerText = "지번: 찾을 수 없음";
+    .then(r=>r.json())
+    .then(d=>{
+        if(!d.documents || d.documents.length===0){
+            road.innerText = "도로명: 없음";
+            jibun.innerText = "지번: 없음";
             return;
         }
-
-        const info = data.documents[0];
-        const roadAddr = info.road_address ? info.road_address.address_name : "없음";
-        const jibunAddr = info.address ? info.address.address_name : "없음";
-
-        document.getElementById('road').innerText = "도로명: " + roadAddr;
-        document.getElementById('jibun').innerText = "지번: " + jibunAddr;
-    })
-    .catch(err => {
-        console.error(err);
-        document.getElementById('road').innerText = "도로명: 오류 발생";
-        document.getElementById('jibun').innerText = "지번: 오류 발생";
+        const info = d.documents[0];
+        road.innerText = "도로명: " + (info.road_address?.address_name ?? "없음");
+        jibun.innerText = "지번: " + (info.address?.address_name ?? "없음");
+        
+        saveHistory(lastLat, lastLon, info);
+        loadHistory();
     });
 }
 
-document.getElementById("cameraInput").addEventListener("change", function(e){
+// === 카메라 촬영 처리 ===
+cameraInput.addEventListener("change", e=>{
     const file = e.target.files[0];
     if(!file) return;
-
-    document.getElementById("photo").src = URL.createObjectURL(file);
+    photo.src = URL.createObjectURL(file);
 
     EXIF.getData(file, function(){
-        let lat = EXIF.getTag(this, "GPSLatitude");
-        let lon = EXIF.getTag(this, "GPSLongitude");
-        let latRef = EXIF.getTag(this, "GPSLatitudeRef") || "N";
-        let lonRef = EXIF.getTag(this, "GPSLongitudeRef") || "E";
+        let lat = EXIF.getTag(this,"GPSLatitude");
+        let lon = EXIF.getTag(this,"GPSLongitude");
+        let latRef = EXIF.getTag(this,"GPSLatitudeRef")||"N";
+        let lonRef = EXIF.getTag(this,"GPSLongitudeRef")||"E";
 
         if(!lat || !lon){
-            alert("GPS 정보가 없는 사진입니다. 카메라 위치 정보를 켜고 다시 찍어주세요.");
+            alert("GPS 정보가 없는 사진입니다.\n카메라 위치정보 ON으로 찍어주세요.");
             return;
         }
 
-        function convert(v){
-            return v[0] + v[1]/60 + v[2]/3600;
-        }
+        function toDecimal(v){ return v[0] + v[1]/60 + v[2]/3600; }
 
-        let latitude = convert(lat);
-        let longitude = convert(lon);
-        if(latRef === "S") latitude = -latitude;
-        if(lonRef === "W") longitude = -longitude;
+        let latitude = toDecimal(lat);
+        let longitude = toDecimal(lon);
+        if(latRef==="S") latitude = -latitude;
+        if(lonRef==="W") longitude = -longitude;
 
         showMap(latitude, longitude);
         fetchKakaoAddress(latitude, longitude);
-    });
+    })
 });
 
+// === 주소 복사 ===
+copyBtn.onclick = ()=>{
+    const txt = road.innerText + "\n" + jibun.innerText;
+    navigator.clipboard.writeText(txt);
+    alert("주소 복사 완료!");
+};
+
+// === 지도 + 사진 스크린샷 저장 ===
+saveShotBtn.onclick = ()=>{
+    html2canvas(document.body).then(canvas=>{
+        const link = document.createElement("a");
+        link.download = "map_photo.png";
+        link.href = canvas.toDataURL();
+        link.click();
+    });
+};
+
+// === 전체 화면 지도 ===
+fullMapBtn.onclick = ()=>{
+    window.open(`https://www.openstreetmap.org/#map=18/${lastLat}/${lastLon}`, "_blank");
+};
+
+// === 히스토리 저장 ===
+function saveHistory(lat, lon, info){
+    let list = JSON.parse(localStorage.getItem("history") || "[]");
+    list.unshift({
+        lat, lon,
+        road: info.road_address?.address_name ?? "없음",
+        jibun: info.address?.address_name ?? "없음",
+        time: new Date().toLocaleString()
+    });
+    if(list.length > 20) list.pop();
+    localStorage.setItem("history", JSON.stringify(list));
+}
+
+function loadHistory(){
+    let list = JSON.parse(localStorage.getItem("history") || "[]");
+    historyList.innerHTML = "";
+    list.forEach(item=>{
+        historyList.innerHTML += `
+            <div>
+                <div><b>${item.time}</b></div>
+                <div>도로명: ${item.road}</div>
+                <div>지번: ${item.jibun}</div>
+                <div>좌표: ${item.lat}, ${item.lon}</div>
+            </div>
+        `;
+    });
+}
+loadHistory();
+
+// === 서비스워커 ===
 if("serviceWorker" in navigator){
     navigator.serviceWorker.register("service-worker.js");
 }
