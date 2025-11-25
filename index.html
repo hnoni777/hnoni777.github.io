@@ -3,50 +3,66 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="manifest" href="manifest.json" />
 <title>사진 GPS 지도앱</title>
 
 <style>
-body {
+html, body {
     margin:0; padding:0;
+    height:100%;
+    overflow:hidden; /* 스크롤 제거 */
     font-family:Arial, sans-serif;
+}
+
+/* 화면을 위/아래 50%로 나눔 */
+#topArea {
+    height:50vh;
+    width:100%;
+    display:flex;
+    flex-direction:column;
     background:#f5f5f5;
 }
-header {
-    background:#3F51B5;
-    color:white;
-    padding:15px;
-    font-size:20px;
-    text-align:center;
-}
 
-/* 5:5 비율 적용 */
 #map {
     width:100%;
-    height:50vh;
-}
-#photo {
-    width:100%;
-    height:50vh;
-    object-fit:cover;
-    border-radius:0;
+    flex:1;              /* 지도 영역: topArea 안에서 자동 확장 */
 }
 
-.box {
-    padding:15px;
+#addrBox {
+    padding:8px 12px;
     background:white;
-    margin-top:8px;
-    border-radius:10px;
+    border-top:1px solid #ccc;
+}
+
+#addrBox div {
+    font-size:14px;
+    margin:2px 0;
 }
 
 .btn {
-    padding:10px 15px;
-    border:none;
-    border-radius:8px;
+    padding:6px 10px;
     background:#3F51B5;
     color:white;
-    margin-top:10px;
-    font-size:15px;
+    border:none;
+    border-radius:6px;
+    margin-top:5px;
+    font-size:14px;
+}
+
+/* 아래 사진 50% */
+#bottomArea {
+    height:50vh;
+    width:100%;
+    overflow:hidden;
+}
+
+#photo {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+#cameraInput {
+    display:none; /* 화면에 안 보임 */
 }
 </style>
 
@@ -57,46 +73,44 @@ header {
 </head>
 <body>
 
-<header>📸 사진 GPS 지도앱</header>
+<!-- 위 50% : 지도 + 주소 + 복사 -->
+<div id="topArea">
+    <div id="map"></div>
 
-<!-- 지도 50% -->
-<div id="map"></div>
-
-<!-- 주소 박스 -->
-<div class="box">
-  <div><b>주소 정보</b></div>
-  <div id="road">도로명: -</div>
-  <div id="jibun">지번: -</div>
-  <button class="btn" id="copyBtn">주소 복사</button>
+    <div id="addrBox">
+        <div id="road">도로명: -</div>
+        <div id="jibun">지번: -</div>
+        <button class="btn" id="copyBtn">주소 복사</button>
+        <button class="btn" id="takeBtn">사진 선택</button>
+    </div>
 </div>
 
-<!-- 촬영 -->
-<div class="box">
-  <div><b>사진 촬영</b></div>
-  <input id="cameraInput" type="file" accept="image/*" capture="camera">
+<!-- 아래 50% : 사진 -->
+<div id="bottomArea">
+    <img id="photo">
 </div>
 
-<!-- 사진 50% -->
-<img id="photo">
+<!-- 실제 사진 촬영 input -->
+<input id="cameraInput" type="file" accept="image/*" capture="camera">
+
 
 <script>
-// === 글로벌 ===
 let map, marker;
 
-// === 지도 ===
+/* 지도 생성 */
 function showMap(lat, lon){
     if(map) map.remove();
 
     map = L.map('map').setView([lat, lon], 17);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
+        maxZoom:19
     }).addTo(map);
 
     marker = L.marker([lat, lon]).addTo(map);
 }
 
-// === 주소 변환 ===
-function fetchKakaoAddress(lat, lon){
+/* 카카오 주소 변환 */
+function fetchAddr(lat, lon){
     fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}&input_coord=WGS84`, {
         headers:{ "Authorization": "KakaoAK 83aa83329de094b2cf52a2e8a34206fa" }
     })
@@ -107,13 +121,17 @@ function fetchKakaoAddress(lat, lon){
             jibun.innerText = "지번: 없음";
             return;
         }
+
         const info = d.documents[0];
         road.innerText = "도로명: " + (info.road_address?.address_name ?? "없음");
         jibun.innerText = "지번: " + (info.address?.address_name ?? "없음");
     });
 }
 
-// === 사진 처리 ===
+/* 사진 선택 버튼 → 실제 input 클릭 */
+takeBtn.onclick = ()=> cameraInput.click();
+
+/* 사진 촬영 처리 */
 cameraInput.addEventListener("change", e=>{
     const file = e.target.files[0];
     if(!file) return;
@@ -127,7 +145,7 @@ cameraInput.addEventListener("change", e=>{
         let lonRef = EXIF.getTag(this,"GPSLongitudeRef") || "E";
 
         if(!lat || !lon){
-            alert("GPS가 없는 사진입니다. 카메라 위치정보 ON 하고 다시 촬영하세요.");
+            alert("GPS 정보 없음! 카메라 위치정보 켜고 찍어줘.");
             return;
         }
 
@@ -135,25 +153,21 @@ cameraInput.addEventListener("change", e=>{
 
         let latitude = toDec(lat);
         let longitude = toDec(lon);
-        if(latRef === "S") latitude = -latitude;
-        if(lonRef === "W") longitude = -longitude;
+
+        if(latRef==="S") latitude = -latitude;
+        if(lonRef==="W") longitude = -longitude;
 
         showMap(latitude, longitude);
-        fetchKakaoAddress(latitude, longitude);
+        fetchAddr(latitude, longitude);
     });
 });
 
-// === 주소 복사 ===
+/* 주소 복사 */
 copyBtn.onclick = ()=>{
     const txt = road.innerText + "\n" + jibun.innerText;
     navigator.clipboard.writeText(txt);
     alert("주소 복사됨!");
 };
-
-// === PWA ===
-if("serviceWorker" in navigator){
-    navigator.serviceWorker.register("service-worker.js");
-}
 </script>
 
 </body>
