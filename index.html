@@ -14,7 +14,9 @@ html, body {
     overflow:hidden;
 }
 
+/* ============================ */
 /* 인트로 화면 */
+/* ============================ */
 #introScreen {
     position:absolute;
     top:0; left:0; width:100%; height:100%;
@@ -27,25 +29,32 @@ html, body {
     text-align:center;
 }
 
+#introScreen h1 {
+    font-size:26px;
+    margin-bottom:20px;
+}
+
 #introBtn {
-    padding:16px 26px;
+    padding:14px 24px;
     background:white;
     color:#3b82f6;
-    font-size:20px;
-    border:none;
-    border-radius:14px;
+    font-size:18px;
     font-weight:600;
+    border:none;
+    border-radius:12px;
     box-shadow:0 4px 12px rgba(0,0,0,0.25);
 }
 
+/* ============================ */
 /* 메인 화면 */
+/* ============================ */
 #mainScreen {
     display:none;
     width:100%;
     height:100%;
 }
 
-/* 6 : 4 비율 적용 */
+/* 6 : 4 비율 */
 #topArea {
     height:60vh;
     width:100%;
@@ -91,30 +100,34 @@ html, body {
     box-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
 
-/* 주소 글씨 크기 줄임 */
+/* 주소 글씨 작게 */
 #addrBox div {
     font-size:12px;
     margin:2px 0;
 }
 
-/* 버튼 2개 */
+/* ============================ */
+/* 미니 버튼 스타일 (1번 선택버전) */
+/* ============================ */
 .btn-wrap {
     display:flex;
     justify-content:space-between;
-    margin-top:8px;
+    margin-top:6px;
 }
 
 .btn {
-    padding:8px 12px;
+    padding:4px 8px;
+    height:26px;
     background:#3B82F6;
     color:white;
     border:none;
-    border-radius:8px;
-    font-size:14px;
+    border-radius:6px;
+    font-size:11px;
     width:48%;
+    font-weight:500;
 }
 
-/* 숨겨진 input */
+/* 숨은 input */
 #cameraInput { display:none; }
 
 </style>
@@ -131,7 +144,7 @@ html, body {
 <!-- 인트로 화면 -->
 <!-- ========================= -->
 <div id="introScreen">
-    <h1 style="font-size:27px; margin-bottom:18px;">📸 사진 GPS 지도앱</h1>
+    <h1>📸 사진 GPS 지도앱</h1>
     <button id="introBtn">사진 촬영하기</button>
 </div>
 
@@ -185,7 +198,7 @@ function showMap(lat, lon){
     marker = L.marker([lat, lon]).addTo(map);
 }
 
-/* 주소 변환 */
+/* 주소 변환 (카카오 API) */
 function fetchAddr(lat, lon){
     fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}&input_coord=WGS84`, {
         headers:{ "Authorization": "KakaoAK 83aa83329de094b2cf52a2e8a34206fa" }
