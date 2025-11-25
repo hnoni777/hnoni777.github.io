@@ -1,1 +1,9 @@
-{"name": "사진 GPS 지도 (풀옵션)", "short_name": "사진지도", "start_url": "index.html", "display": "standalone", "background_color": "#ffffff", "theme_color": "#3F51B5", "icons": []}
+{
+  "name": "사진 GPS 지도 (풀옵션)",
+  "short_name": "사진지도",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3F51B5",
+  "icons": []
+}
