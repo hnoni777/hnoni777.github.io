@@ -85,7 +85,6 @@ html, body {
     box-shadow:0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* 지도 */
 #map {
     width:100%;
     height:100%;
@@ -106,9 +105,7 @@ html, body {
     margin:2px 0;
 }
 
-/* ============================ */
-/* 미니 버튼 스타일 (1번 선택버전) */
-/* ============================ */
+/* 미니 버튼 */
 .btn-wrap {
     display:flex;
     justify-content:space-between;
@@ -127,9 +124,10 @@ html, body {
     font-weight:500;
 }
 
-/* 숨은 input */
-#cameraInput { display:none; }
-
+/* 실제 사진 촬영 input (후면 카메라 강제) */
+#cameraInput {
+    display:none;
+}
 </style>
 
 <!-- 라이브러리 -->
@@ -177,7 +175,8 @@ html, body {
 
 </div>
 
-<input id="cameraInput" type="file" accept="image/*" capture="camera">
+<!-- 후면 카메라 강제 -->
+<input id="cameraInput" type="file" accept="image/*" capture="environment">
 
 <script>
 
@@ -192,17 +191,19 @@ function showMap(lat, lon){
     if(map) map.remove();
 
     map = L.map('map',{zoomControl:false}).setView([lat, lon], 17);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 })
-        .addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+        maxZoom:19 
+    }).addTo(map);
 
     marker = L.marker([lat, lon]).addTo(map);
 }
 
 /* 주소 변환 (카카오 API) */
 function fetchAddr(lat, lon){
-    fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}&input_coord=WGS84`, {
-        headers:{ "Authorization": "KakaoAK 83aa83329de094b2cf52a2e8a34206fa" }
-    })
+    fetch(
+        `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}&input_coord=WGS84`,
+        { headers:{ "Authorization": "KakaoAK 83aa83329de094b2cf52a2e8a34206fa" } }
+    )
     .then(r=>r.json())
     .then(d=>{
         if(!d.documents || d.documents.length===0){
@@ -233,7 +234,7 @@ cameraInput.addEventListener("change", e=>{
         let lonRef = EXIF.getTag(this,"GPSLongitudeRef") || "E";
 
         if(!lat || !lon){
-            alert("GPS 정보 없음! 위치정보 ON 상태에서 다시 찍어줘.");
+            alert("GPS 정보 없음! 위치정보 ON상태에서 다시 찍어줘.");
             return;
         }
 
