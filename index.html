@@ -9,63 +9,92 @@
 html, body {
     margin:0; padding:0;
     height:100%;
-    overflow:hidden; /* 스크롤 제거 */
-    font-family:Arial, sans-serif;
+    overflow:hidden;
+    font-family:'Pretendard', Arial, sans-serif;
+    background:#f0f2f5;
 }
 
-/* 화면을 위/아래 50%로 나눔 */
+/* 전체 2등분 */
 #topArea {
     height:50vh;
     width:100%;
     display:flex;
     flex-direction:column;
-    background:#f5f5f5;
+    padding:10px;
+    box-sizing:border-box;
 }
 
+/* 지도 카드 스타일 */
+.map-card {
+    flex:1;
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* 지도 */
 #map {
     width:100%;
-    flex:1;              /* 지도 영역: topArea 안에서 자동 확장 */
+    height:100%;
 }
 
+/* 주소 카드 */
 #addrBox {
-    padding:8px 12px;
-    background:white;
-    border-top:1px solid #ccc;
+    margin-top:10px;
+    background:#fff;
+    padding:14px 16px;
+    border-radius:12px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
 
 #addrBox div {
     font-size:14px;
-    margin:2px 0;
+    margin:3px 0;
 }
 
+/* 버튼 */
 .btn {
-    padding:6px 10px;
-    background:#3F51B5;
+    padding:10px 16px;
+    background:#3B82F6;
     color:white;
     border:none;
-    border-radius:6px;
-    margin-top:5px;
-    font-size:14px;
+    border-radius:10px;
+    font-size:15px;
+    margin-top:10px;
+    width:48%;
 }
 
-/* 아래 사진 50% */
+/* 버튼 영역 */
+.btn-wrap {
+    display:flex;
+    justify-content:space-between;
+}
+
+/* 아래 사진 영역 */
 #bottomArea {
     height:50vh;
     width:100%;
     overflow:hidden;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:#000;
 }
 
 #photo {
     width:100%;
     height:100%;
-    object-fit:cover;
+    object-fit:contain;
+    background:#000;
 }
 
+/* 숨김 input */
 #cameraInput {
-    display:none; /* 화면에 안 보임 */
+    display:none;
 }
 </style>
 
+<!-- 라이브러리 -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
@@ -73,35 +102,40 @@ html, body {
 </head>
 <body>
 
-<!-- 위 50% : 지도 + 주소 + 복사 -->
 <div id="topArea">
-    <div id="map"></div>
 
+    <!-- 지도 카드 -->
+    <div class="map-card">
+        <div id="map"></div>
+    </div>
+
+    <!-- 주소 카드 -->
     <div id="addrBox">
         <div id="road">도로명: -</div>
         <div id="jibun">지번: -</div>
-        <button class="btn" id="copyBtn">주소 복사</button>
-        <button class="btn" id="takeBtn">사진 선택</button>
+
+        <div class="btn-wrap">
+            <button class="btn" id="copyBtn">주소 복사</button>
+            <button class="btn" id="takeBtn">사진 촬영</button>
+        </div>
     </div>
 </div>
 
-<!-- 아래 50% : 사진 -->
+<!-- 사진 영역 -->
 <div id="bottomArea">
     <img id="photo">
 </div>
 
-<!-- 실제 사진 촬영 input -->
 <input id="cameraInput" type="file" accept="image/*" capture="camera">
-
 
 <script>
 let map, marker;
 
-/* 지도 생성 */
+/* 지도 표시 */
 function showMap(lat, lon){
     if(map) map.remove();
 
-    map = L.map('map').setView([lat, lon], 17);
+    map = L.map('map',{zoomControl:false}).setView([lat, lon], 17);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom:19
     }).addTo(map);
@@ -121,17 +155,16 @@ function fetchAddr(lat, lon){
             jibun.innerText = "지번: 없음";
             return;
         }
-
         const info = d.documents[0];
         road.innerText = "도로명: " + (info.road_address?.address_name ?? "없음");
         jibun.innerText = "지번: " + (info.address?.address_name ?? "없음");
     });
 }
 
-/* 사진 선택 버튼 → 실제 input 클릭 */
+/* 사진 촬영 버튼 */
 takeBtn.onclick = ()=> cameraInput.click();
 
-/* 사진 촬영 처리 */
+/* EXIF 처리 */
 cameraInput.addEventListener("change", e=>{
     const file = e.target.files[0];
     if(!file) return;
@@ -145,7 +178,7 @@ cameraInput.addEventListener("change", e=>{
         let lonRef = EXIF.getTag(this,"GPSLongitudeRef") || "E";
 
         if(!lat || !lon){
-            alert("GPS 정보 없음! 카메라 위치정보 켜고 찍어줘.");
+            alert("GPS 정보 없음! 위치정보 ON 상태에서 다시 찍어줘.");
             return;
         }
 
