@@ -191,7 +191,36 @@ openInput.addEventListener("change", e=>{
     const file = e.target.files[0];
     if(!file) return;
 
+    // 사진 표시
     photo.src = URL.createObjectURL(file);
+
+    // 사진 EXIF GPS 읽기
+    EXIF.getData(file, function(){
+        let lat = EXIF.getTag(this, "GPSLatitude");
+        let lon = EXIF.getTag(this, "GPSLongitude");
+        let latRef = EXIF.getTag(this, "GPSLatitudeRef") || "N";
+        let lonRef = EXIF.getTag(this, "GPSLongitudeRef") || "E";
+
+        if(!lat || !lon){
+            alert("이 사진에는 위치정보(GPS)가 없습니다!");
+            return;
+        }
+
+        // DMS → Decimal 변환 함수
+        const toDec = v => v[0] + v[1]/60 + v[2]/3600;
+
+        let latitude = toDec(lat);
+        let longitude = toDec(lon);
+
+        if(latRef === "S") latitude = -latitude;
+        if(lonRef === "W") longitude = -longitude;
+
+        // 지도 업데이트
+        showKakaoMap(latitude, longitude);
+
+        // 주소 업데이트
+        fetchAddr(latitude, longitude);
+    });
 });
 
 copyBtn.onclick = () => {
