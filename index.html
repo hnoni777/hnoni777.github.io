@@ -112,18 +112,24 @@ let map, marker;
 function showKakaoMap(lat, lon){
     const container = document.getElementById('map');
 
-    map = new kakao.maps.Map(container, {
-        center: new kakao.maps.LatLng(lat, lon),
-        level: 3
-    });
+    if(!map){
+        // 👉 최초 1회만 지도 생성
+        map = new kakao.maps.Map(container, {
+            center: new kakao.maps.LatLng(lat, lon),
+            level: 3
+        });
 
-    marker = new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(lat, lon)
-    });
-
-    marker.setMap(map);
+        marker = new kakao.maps.Marker({
+            position: new kakao.maps.LatLng(lat, lon)
+        });
+        marker.setMap(map);
+    } else {
+        // 👉 이미 만들어진 지도는 위치만 변경함
+        const pos = new kakao.maps.LatLng(lat, lon);
+        map.setCenter(pos);
+        marker.setPosition(pos);
+    }
 }
-
 /* 주소 변환 */
 function fetchAddr(lat, lon){
     fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}`, {
@@ -191,10 +197,8 @@ openInput.addEventListener("change", e=>{
     const file = e.target.files[0];
     if(!file) return;
 
-    // 사진 표시
     photo.src = URL.createObjectURL(file);
 
-    // 사진 EXIF GPS 읽기
     EXIF.getData(file, function(){
         let lat = EXIF.getTag(this, "GPSLatitude");
         let lon = EXIF.getTag(this, "GPSLongitude");
@@ -202,23 +206,21 @@ openInput.addEventListener("change", e=>{
         let lonRef = EXIF.getTag(this, "GPSLongitudeRef") || "E";
 
         if(!lat || !lon){
-            alert("이 사진에는 위치정보(GPS)가 없습니다!");
+            alert("위치 정보가 없는 사진입니다.");
             return;
         }
 
-        // DMS → Decimal 변환 함수
         const toDec = v => v[0] + v[1]/60 + v[2]/3600;
-
         let latitude = toDec(lat);
         let longitude = toDec(lon);
 
         if(latRef === "S") latitude = -latitude;
         if(lonRef === "W") longitude = -longitude;
 
-        // 지도 업데이트
+        // 🔥 지도 갱신 (새로 만들지 않고 위치만 변경)
         showKakaoMap(latitude, longitude);
 
-        // 주소 업데이트
+        // 🔥 주소 변경
         fetchAddr(latitude, longitude);
     });
 });
