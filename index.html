@@ -111,22 +111,28 @@ let map, marker;
 /* 지도 */
 function showKakaoMap(lat, lon){
     const container = document.getElementById('map');
+    const pos = new kakao.maps.LatLng(lat, lon);
 
     if(!map){
-        // 👉 최초 1회만 지도 생성
+        // 최초 지도 생성
         map = new kakao.maps.Map(container, {
-            center: new kakao.maps.LatLng(lat, lon),
+            center: pos,
             level: 3
         });
 
         marker = new kakao.maps.Marker({
-            position: new kakao.maps.LatLng(lat, lon)
+            position: pos
         });
         marker.setMap(map);
+
     } else {
-        // 👉 이미 만들어진 지도는 위치만 변경함
-        const pos = new kakao.maps.LatLng(lat, lon);
+        // 지도 크기/레이아웃 먼저 새로고침
+        map.relayout();
+
+        // 지도 위치 이동
         map.setCenter(pos);
+
+        // 마커 이동
         marker.setPosition(pos);
     }
 }
