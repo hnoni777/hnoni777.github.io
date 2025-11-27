@@ -110,11 +110,17 @@ let map, marker;
 
 /* 지도 */
 function showKakaoMap(lat, lon){
-    map = new kakao.maps.Map(map, {
+    const container = document.getElementById('map');
+
+    map = new kakao.maps.Map(container, {
         center: new kakao.maps.LatLng(lat, lon),
         level: 3
     });
-    marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(lat, lon) });
+
+    marker = new kakao.maps.Marker({
+        position: new kakao.maps.LatLng(lat, lon)
+    });
+
     marker.setMap(map);
 }
 
