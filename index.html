@@ -1,18 +1,13 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>대형폐기물 위치공유</title>
 
-<!-- 카카오맵 -->
-<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa69c041aaaed4c3&libraries=services"></script>
-
-<!-- PWA -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#3B82F6">
-
-<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+<!-- Leaflet 지도 CDN -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <style>
 html, body {
@@ -22,77 +17,86 @@ html, body {
     height:100%;
     overflow:hidden;
     font-family:'Pretendard', sans-serif;
+    background:#f5f5f5;
 }
 
-/* 인트로 화면 */
+/* Intro 화면 */
 #introScreen {
-    position:fixed;
-    top:0; left:0;
-    width:100%; height:100%;
+    width:100%;
+    height:100%;
     background:url('intro.png') center/cover no-repeat;
-    z-index:9999;
+    position:relative;
 }
 
-#introStartBtn {
+#startBtn {
     position:absolute;
+    bottom:60px;
     left:50%;
     transform:translateX(-50%);
-    bottom:16%;
-    width:55%;
-    height:10%;
-    background:rgba(0,0,0,0);
+    padding:14px 22px;
+    font-size:20px;
     border:none;
+    border-radius:12px;
+    background:#333;
+    color:#fff;
 }
 
-/* 메인 화면 레이아웃 */
+/* 메인 화면 */
 #mainScreen {
     width:100%;
     height:100%;
     display:none;
+    background:#ffffff;
+    display:flex;
     flex-direction:column;
 }
 
+/* ---------------- ✔ 핵심 영역 안정화 ---------------- */
 #topArea {
     width:100%;
-    overflow:hidden;
-    padding:10px;
+    height:330px; /* 고정 픽셀로 안정화 */
+    padding:12px;
     box-sizing:border-box;
 }
 
 #map {
     width:100%;
-    border-radius:16px;
-    overflow:hidden;
-    background:#f1f1f1;
-    box-shadow:0 4px 10px rgba(0,0,0,0.15);
+    height:220px; /* 지도 영역 고정 */
+    background:#ddd;
+    border-radius:12px;
 }
 
+/* 주소 정보 */
 #addrBox {
     margin-top:10px;
-    background:#fff;
-    padding:12px 14px;
+    padding:12px;
     border-radius:12px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    background:#ffffff;
+    box-shadow:0 2px 5px rgba(0,0,0,0.15);
+    font-size:16px;
 }
 
-.btn-wrap {
-    margin-top:8px;
+/* 버튼 영역 */
+#btnRow {
+    margin-top:10px;
     display:flex;
-    gap:6px;
+    justify-content:space-between;
+    gap:10px;
 }
 
-.btn {
+.actionBtn {
     flex:1;
-    padding:10px 0;
-    background:#3B82F6;
-    color:#fff;
+    padding:12px 0;
+    background:#2f6bff;
+    color:white;
+    font-size:17px;
     border:none;
-    border-radius:8px;
-    font-size:14px;
-    font-weight:600;
+    border-radius:10px;
 }
 
+/* 사진 영역 - 남은 공간 모두 차지 */
 #bottomArea {
+    flex:1;
     width:100%;
     background:#000;
     display:flex;
@@ -105,21 +109,18 @@ html, body {
     height:100%;
     object-fit:contain;
 }
-
-#cameraInput { display:none; }
-
 </style>
 </head>
-
 <body>
 
-<!-- 인트로 -->
+<!-- Intro Screen -->
 <div id="introScreen">
-    <button id="introStartBtn"></button>
+    <button id="startBtn">사진 촬영</button>
 </div>
 
-<!-- 메인 화면 -->
+<!-- Main Screen -->
 <div id="mainScreen">
+
     <div id="topArea">
         <div id="map"></div>
 
@@ -127,145 +128,122 @@ html, body {
             <div id="road">도로명: -</div>
             <div id="jibun">지번: -</div>
 
-            <div class="btn-wrap">
-                <button class="btn" id="copyBtn">주소 복사</button>
-                <button class="btn" id="againBtn">다시 촬영</button>
-                <button class="btn" id="savePhotoBtn">사진 저장</button>
+            <div id="btnRow">
+                <button class="actionBtn" id="copyBtn">주소 복사</button>
+                <button class="actionBtn" id="retakeBtn">다시 촬영</button>
+                <button class="actionBtn" id="saveBtn">사진 저장</button>
             </div>
         </div>
     </div>
 
     <div id="bottomArea">
-        <img id="photo">
+        <img id="photo" src="" alt="photo" />
     </div>
+
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
 </div>
 
-<input id="cameraInput" type="file" accept="image/*" capture="environment">
-
 <script>
-const KAKAO_REST_KEY = "83aa83329de094b2cf52a2e8a34206fa";
-
-introStartBtn.onclick = () => cameraInput.click();
-againBtn.onclick = () => cameraInput.click();
-
-/* ============================
-   화면 높이 강제 설정 (퀀텀4 필수)
-============================ */
-function fixHeights() {
-    const h = window.innerHeight;
-
-    // 상단/하단 5:5 비율 (각 50%)
-    const topH = h * 0.5;
-    const bottomH = h * 0.5;
-
-    document.getElementById("topArea").style.height = topH + "px";
-    document.getElementById("bottomArea").style.height = bottomH + "px";
-
-    // 지도 영역 높이 (주소박스 높이 제외)
-    const addrHeight = document.getElementById("addrBox").offsetHeight;
-    document.getElementById("map").style.height = (topH - addrHeight - 20) + "px";
-}
-
-window.onload = fixHeights;
-window.onresize = fixHeights;
-
-let map, marker;
-
-/* 지도 표시 */
-function showKakaoMap(lat, lon) {
-    fixHeights(); // 기종별 높이 재설정
-
-    const mapDiv = document.getElementById("map");
-
-    map = new kakao.maps.Map(mapDiv, {
-        center: new kakao.maps.LatLng(lat, lon),
-        level: 3
-    });
-
-    marker = new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(lat, lon)
-    });
-    marker.setMap(map);
-
-    // 지도 강제 리사이즈 (퀀텀4 필수)
-    setTimeout(() => {
-        kakao.maps.event.trigger(map, 'resize');
-        map.setCenter(new kakao.maps.LatLng(lat, lon));
-    }, 300);
-}
-
-/* 주소 변환 */
-function fetchAddr(lat, lon){
-    fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}`, {
-        headers:{ "Authorization":"KakaoAK " + KAKAO_REST_KEY }
-    })
-    .then(r=>r.json())
-    .then(d=>{
-        if(!d.documents.length){
-            road.innerText = "도로명: 없음";
-            jibun.innerText = "지번: 없음";
-            return;
-        }
-        const info = d.documents[0];
-        road.innerText = "도로명: " + (info.road_address?.address_name ?? "없음");
-        jibun.innerText = "지번: " + (info.address?.address_name ?? "없음");
-    });
-}
-
-/* 사진 촬영 */
-cameraInput.addEventListener("change", e=>{
-    const file = e.target.files[0];
-    if(!file) return;
-
-    photo.src = URL.createObjectURL(file);
-
-    EXIF.getData(file, function(){
-        let lat = EXIF.getTag(this, "GPSLatitude");
-        let lon = EXIF.getTag(this, "GPSLongitude");
-        let latRef = EXIF.getTag(this, "GPSLatitudeRef") || "N";
-        let lonRef = EXIF.getTag(this, "GPSLongitudeRef") || "E";
-
-        if(!lat || !lon){
-            alert("GPS 정보 없음! 카메라 위치정보 허용 필요");
-            return;
-        }
-
-        introScreen.style.display = "none";
-        mainScreen.style.display = "flex";
-
-        const toDec = v => (v[0] + v[1]/60 + v[2]/3600);
-
-        let latitude = toDec(lat);
-        let longitude = toDec(lon);
-        if(latRef === "S") latitude = -latitude;
-        if(lonRef === "W") longitude = -longitude;
-
-        showKakaoMap(latitude, longitude);
-        fetchAddr(latitude, longitude);
-    });
-});
-
-/* 주소 복사 */
-copyBtn.onclick = () => {
-    const txt = road.innerText + "\n" + jibun.innerText;
-    navigator.clipboard.writeText(txt);
-    alert("주소 복사됨!");
+// ---------------- Intro → Main 이동 ----------------
+document.getElementById("startBtn").onclick = () => {
+    document.getElementById("introScreen").style.display = "none";
+    document.getElementById("mainScreen").style.display = "flex";
+    document.getElementById("cameraInput").click();
 };
 
-/* 사진 저장 */
-savePhotoBtn.onclick = () => {
-    if(!photo.src) return alert("사진 없음!");
+// 다시 촬영
+document.getElementById("retakeBtn").onclick = () => {
+    document.getElementById("cameraInput").click();
+};
+
+// 주소 복사
+document.getElementById("copyBtn").onclick = () => {
+    const text = document.getElementById("road").textContent + "\n" +
+                 document.getElementById("jibun").textContent;
+    navigator.clipboard.writeText(text);
+    alert("주소가 복사되었습니다!");
+};
+
+// 사진 저장
+document.getElementById("saveBtn").onclick = () => {
+    const img = document.getElementById("photo").src;
     const a = document.createElement("a");
-    a.href = photo.src;
-    a.download = `photo_${Date.now()}.jpg`;
+    a.href = img;
+    a.download = "photo.jpg";
     a.click();
 };
 
-/* PWA */
-if("serviceWorker" in navigator){
-    navigator.serviceWorker.register("service-worker.js");
-}
+// ---------------- 사진 분석 + 지도 표시 ----------------
+document.getElementById("cameraInput").addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // 이미지 표시
+    const imgURL = URL.createObjectURL(file);
+    document.getElementById("photo").src = imgURL;
+
+    // EXIF GPS 읽기
+    const arrayBuffer = await file.arrayBuffer();
+    const view = new DataView(arrayBuffer);
+
+    let lat = null, lng = null;
+
+    function readGPS() {
+        const exif = EXIF.readFromBinaryFile(arrayBuffer);
+        if (!exif || !exif.GPSLatitude || !exif.GPSLongitude) {
+            return null;
+        }
+        const latRef = exif.GPSLatitudeRef === "S" ? -1 : 1;
+        const lngRef = exif.GPSLongitudeRef === "W" ? -1 : 1;
+
+        const convert = (arr) => arr[0] + arr[1] / 60 + arr[2] / 3600;
+
+        return {
+            lat: convert(exif.GPSLatitude) * latRef,
+            lng: convert(exif.GPSLongitude) * lngRef
+        };
+    }
+
+    const gps = readGPS();
+    if (!gps) {
+        alert("사진에 위치 정보가 없습니다.");
+        return;
+    }
+
+    lat = gps.lat;
+    lng = gps.lng;
+
+    // 지도 생성
+    if (!window.map) {
+        window.map = L.map('map').setView([lat, lng], 17);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+    } else {
+        map.setView([lat, lng], 17);
+    }
+
+    L.marker([lat, lng]).addTo(map);
+
+    // 주소 가져오기 - 카카오 API
+    fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`, {
+        headers: {
+            Authorization: "KakaoAK c473f288616318b4fa69c041aaaed4c3"
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        const info = data.documents[0];
+        if (info) {
+            document.getElementById("road").innerText = "도로명: " + (info.road_address?.address_name || "없음");
+            document.getElementById("jibun").innerText = "지번: " + info.address.address_name;
+        }
+    });
+});
 </script>
+
+<!-- EXIF 라이브러리 -->
+<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 
 </body>
 </html>
