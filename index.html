@@ -2,11 +2,11 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>대형폐기물 위치공유</title>
 
 <!-- ✔ 카카오맵 JS SDK -->
-<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa69c041aaaed4c3&libraries=services"></script>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa69c041aaaed4c3&libraries=services"></script>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
@@ -17,20 +17,19 @@
 <style>
 html, body {
     margin:0; padding:0;
-    height:100%;
+    width:100%; height:100%;
     overflow:hidden;
     font-family:'Pretendard', sans-serif;
 }
 
 /* ============================
-   인트로 화면 전체 이미지
+   인트로 화면
 ============================ */
 #introScreen {
     position:fixed;
     top:0; left:0;
     width:100%; height:100%;
-    background:url('intro.png') no-repeat center center;
-    background-size:cover;
+    background:url('intro.png') center/cover no-repeat;
     z-index:9999;
 }
 
@@ -38,16 +37,15 @@ html, body {
     position:absolute;
     left:50%;
     transform:translateX(-50%);
-    bottom:18%;
+    bottom:16%;
     width:55%;
-    height:9%;
+    height:10%;
     background:rgba(0,0,0,0);
     border:none;
-   /* cursor:pointer; */
 }
 
 /* ============================
-   메인 화면 (6:4 비율)
+   메인 화면 (상단5 : 하단5 비율)
 ============================ */
 #mainScreen {
     width:100%;
@@ -57,13 +55,16 @@ html, body {
 }
 
 #topArea {
-    height:50vh;
+    flex:5;   /* ← 상단 영역 50% */
+    display:flex;
+    flex-direction:column;
     padding:10px;
+    gap:10px;
 }
 
 #map {
+    flex:1;
     width:100%;
-    height:70%;
     border-radius:16px;
     overflow:hidden;
     box-shadow:0 4px 10px rgba(0,0,0,0.15);
@@ -71,31 +72,31 @@ html, body {
 
 #addrBox {
     background:#fff;
-    padding:10px 14px;
+    padding:12px 14px;
     border-radius:12px;
-    margin-top:10px;
     box-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
 
+/* 버튼 라인 */
 .btn-wrap {
     margin-top:8px;
     display:flex;
     gap:6px;
 }
-
 .btn {
     flex:1;
-    padding:8px 0;
+    padding:10px 0;
     background:#3B82F6;
-    color:white;
+    color:#fff;
     border:none;
     border-radius:8px;
-    font-size:13px;
+    font-size:14px;
     font-weight:600;
 }
 
+/* 하단 사진 영역 (50%) */
 #bottomArea {
-    height:50vh;
+    flex:5;   /* ← 하단 영역 50% */
     background:#000;
     display:flex;
     justify-content:center;
@@ -119,7 +120,7 @@ html, body {
     <button id="introStartBtn"></button>
 </div>
 
-<!-- 메인 -->
+<!-- 메인 화면 -->
 <div id="mainScreen">
 
     <div id="topArea">
@@ -146,39 +147,33 @@ html, body {
 <input id="cameraInput" type="file" accept="image/*" capture="environment">
 
 <script>
-const KAKAO_JS_KEY = "c473f288616318b4fa69c041aaaed4c3";
 const KAKAO_REST_KEY = "83aa83329de094b2cf52a2e8a34206fa";
 
-/* 인트로 → 카메라 */
 introStartBtn.onclick = () => cameraInput.click();
 againBtn.onclick = () => cameraInput.click();
 
 let map, marker;
 
-/* ✔ 카카오 지도 렌더링 */
+/* 지도 */
 function showKakaoMap(lat, lon){
-    const container = document.getElementById('map');
-
-    map = new kakao.maps.Map(container, {
-        center: new kakao.maps.LatLng(lat, lon),
-        level: 3
+    map = new kakao.maps.Map(document.getElementById("map"), {
+        center:new kakao.maps.LatLng(lat, lon),
+        level:3
     });
-
     marker = new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(lat, lon)
+        position:new kakao.maps.LatLng(lat, lon)
     });
-
     marker.setMap(map);
 }
 
-/* ✔ 카카오 주소 변환 */
+/* 주소 변환 */
 function fetchAddr(lat, lon){
     fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}`, {
-        headers:{ "Authorization": "KakaoAK " + KAKAO_REST_KEY }
+        headers:{ "Authorization":"KakaoAK " + KAKAO_REST_KEY }
     })
     .then(r=>r.json())
     .then(d=>{
-        if(!d.documents || !d.documents.length){
+        if(!d.documents.length){
             road.innerText = "도로명: 없음";
             jibun.innerText = "지번: 없음";
             return;
@@ -189,7 +184,7 @@ function fetchAddr(lat, lon){
     });
 }
 
-/* ✔ 사진 촬영 → 위치 읽기 */
+/* 사진 찍기 */
 cameraInput.addEventListener("change", e=>{
     const file = e.target.files[0];
     if(!file) return;
@@ -203,14 +198,14 @@ cameraInput.addEventListener("change", e=>{
         let lonRef = EXIF.getTag(this,"GPSLongitudeRef") || "E";
 
         if(!lat || !lon){
-            alert("GPS 정보가 없습니다. 위치정보 허용 후 다시 촬영해주세요.");
+            alert("GPS 정보 없음 (카메라 위치 정보 허용 필요)");
             return;
         }
 
         introScreen.style.display="none";
-        mainScreen.style.display="block";
+        mainScreen.style.display="flex";
 
-        const toDec = v => v[0] + v[1]/60 + v[2]/3600;
+        const toDec = v => (v[0] + v[1]/60 + v[2]/3600);
 
         let latitude = toDec(lat);
         let longitude = toDec(lon);
