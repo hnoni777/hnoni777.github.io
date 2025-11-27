@@ -99,14 +99,14 @@ html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:'Pre
 <input id="openInput" type="file" accept="image/*">
 
 <script>
+let map = null;
+let marker = null
 const KAKAO_JS_KEY = "c473f288616318b4fa69c041aaaed4c3";
 const KAKAO_REST_KEY = "83aa83329de094b2cf52a2e8a34206fa";
 
 introStartBtn.onclick = () => cameraInput.click();
 againBtn.onclick = () => cameraInput.click();
 openBtn.onclick = () => openInput.click();
-
-let map, marker;
 
 /* 지도 */
 function showKakaoMap(lat, lon){
