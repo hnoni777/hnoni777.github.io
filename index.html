@@ -19,7 +19,7 @@ html, body {
     font-family:'Pretendard', sans-serif;
 }
 
-/* 인트로 */
+/* 인트로 화면 */
 #introScreen {
     position:fixed;
     top:0; left:0;
@@ -37,7 +37,7 @@ html, body {
     border:none;
 }
 
-/* 메인 */
+/* 메인 화면 */
 #mainScreen {
     width:100%; height:100%;
     display:none;
@@ -96,21 +96,18 @@ html, body {
     object-fit:contain;
 }
 
-#cameraInput,
-#galleryInput {
-    display:none;
-}
+#cameraInput { display:none; }
 </style>
 </head>
 
 <body>
 
-<!-- 인트로 -->
+<!-- 인트로 화면 -->
 <div id="introScreen">
     <button id="introStartBtn"></button>
 </div>
 
-<!-- 메인 -->
+<!-- 메인 화면 -->
 <div id="mainScreen">
 
     <div id="topArea">
@@ -123,7 +120,6 @@ html, body {
             <div class="btn-wrap">
                 <button class="btn" id="copyBtn">주소 복사</button>
                 <button class="btn" id="againBtn">다시 촬영</button>
-                <button class="btn" id="openBtn">사진 열기</button>
             </div>
         </div>
     </div>
@@ -134,23 +130,23 @@ html, body {
 
 </div>
 
-<!-- 입력 -->
+<!-- 카메라 -->
 <input id="cameraInput" type="file" accept="image/*" capture="environment">
-<input id="galleryInput" type="file" accept="image/*">
 
 <script>
 const REST_KEY = "83aa83329de094b2cf52a2e8a34206fa";
 
-/* 인트로 → 버튼 */
+/* 인트로 → 촬영 */
 introStartBtn.onclick = () => cameraInput.click();
-againBtn.onclick      = () => cameraInput.click();
-openBtn.onclick       = () => galleryInput.click();
 
-/* 지도 */
+/* 다시 촬영 */
+againBtn.onclick = () => cameraInput.click();
+
+/* 지도 변수 */
 let map = null;
 let marker = null;
 
-/* 지도 초기화 또는 위치만 이동 */
+/* 지도 생성 또는 이동 */
 function initMap(lat, lon) {
     const pos = new kakao.maps.LatLng(lat, lon);
 
@@ -175,10 +171,11 @@ function fetchAddr(lat, lon){
     .then(r=>r.json())
     .then(d=>{
         if(!d.documents.length){
-            road.innerText  = "도로명: 없음";
+            road.innerText = "도로명: 없음";
             jibun.innerText = "지번: 없음";
             return;
         }
+
         const info = d.documents[0];
         road.innerText  = "도로명: " + (info.road_address?.address_name ?? "없음");
         jibun.innerText = "지번: " + (info.address?.address_name ?? "없음");
@@ -193,20 +190,17 @@ function autoSavePhoto(){
     a.click();
 }
 
-/* 핵심: EXIF 먼저 읽고 → 마지막에 photo.src */
-function handleFile(file, autoSave=false){
-    if(!file) return;
-
+/* GPS + 사진 처리 */
+function handleCameraFile(file){
     EXIF.getData(file, function(){
 
-        /* this 대신 file 에서 직접 읽기 (가장 중요한 부분) */
         const lat  = EXIF.getTag(file, "GPSLatitude");
         const lon  = EXIF.getTag(file, "GPSLongitude");
         const latR = EXIF.getTag(file, "GPSLatitudeRef") || "N";
         const lonR = EXIF.getTag(file, "GPSLongitudeRef") || "E";
 
         if(!lat || !lon){
-            alert("GPS 정보 없음");
+            alert("이 사진에는 GPS 정보가 없습니다!");
             return;
         }
 
@@ -215,39 +209,31 @@ function handleFile(file, autoSave=false){
         let latitude  = toDec(lat);
         let longitude = toDec(lon);
 
-        if(latR === "S") latitude = -latitude;
-        if(lonR === "W") longitude = -longitude;
+        if(latR==="S") latitude  = -latitude;
+        if(lonR==="W") longitude = -longitude;
 
         introScreen.style.display = "none";
         mainScreen.style.display  = "block";
 
-        /* 지도 즉시 이동 */
         initMap(latitude, longitude);
-
-        /* 주소 업데이트 */
         fetchAddr(latitude, longitude);
 
-        /* 마지막에 이미지 표시 */
         photo.src = URL.createObjectURL(file);
 
-        if(autoSave) autoSavePhoto();
+        autoSavePhoto();  // 자동 저장
     });
 }
 
-/* 카메라 */
+/* 카메라 촬영 */
 cameraInput.addEventListener("change", e=>{
-    handleFile(e.target.files[0], true);
-});
-
-/* 갤러리 */
-galleryInput.addEventListener("change", e=>{
-    handleFile(e.target.files[0], false);
+    if(e.target.files.length === 0) return;
+    handleCameraFile(e.target.files[0]);
 });
 
 /* 주소 복사 */
 copyBtn.onclick = () => {
     navigator.clipboard.writeText(`${road.innerText}\n${jibun.innerText}`);
-    alert("주소 복사됨!");
+    alert("주소가 복사되었습니다!");
 };
 </script>
 
