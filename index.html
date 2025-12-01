@@ -5,13 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>대형폐기물 위치공유</title>
 
-<!-- ✔ 카카오맵 JS SDK -->
-<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa69c041aaaed4c3&libraries=services"></script>
-
-<!-- PWA -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#3B82F6">
-
 <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 
 <style>
@@ -22,9 +15,6 @@ html, body {
     font-family:'Pretendard', sans-serif;
 }
 
-/* ============================
-   인트로 화면 전체 이미지
-============================ */
 #introScreen {
     position:fixed;
     top:0; left:0;
@@ -33,24 +23,17 @@ html, body {
     background-size:cover;
     z-index:9999;
 }
-
 #introStartBtn {
     position:absolute;
-    left:50%;
+    left:50%; bottom:18%;
     transform:translateX(-50%);
-    bottom:18%;
-    width:55%;
-    height:9%;
+    width:55%; height:9%;
     background:rgba(0,0,0,0);
     border:none;
 }
 
-/* ============================
-   메인 화면 (6:4 비율)
-============================ */
 #mainScreen {
-    width:100%;
-    height:100%;
+    width:100%; height:100%;
     display:none;
     flex-direction:column;
 }
@@ -60,9 +43,10 @@ html, body {
     padding:10px;
 }
 
-#map {
+#mapFrame {
     width:100%;
     height:70%;
+    border:0;
     border-radius:16px;
     overflow:hidden;
     box-shadow:0 4px 10px rgba(0,0,0,0.15);
@@ -78,54 +62,40 @@ html, body {
 
 .btn-wrap {
     margin-top:8px;
-    display:flex;
-    gap:6px;
+    display:flex; gap:6px;
 }
-
 .btn {
-    flex:1;
-    padding:8px 0;
-    background:#3B82F6;
-    color:white;
-    border:none;
-    border-radius:8px;
-    font-size:13px;
-    font-weight:600;
+    flex:1; padding:8px 0;
+    background:#3B82F6; color:white;
+    border:none; border-radius:8px;
+    font-size:13px; font-weight:600;
 }
 
 #bottomArea {
     height:50vh;
     background:#000;
-    display:flex;
-    justify-content:center;
-    align-items:center;
+    display:flex; justify-content:center; align-items:center;
 }
-
 #photo {
-    width:100%;
-    height:100%;
+    width:100%; height:100%;
     object-fit:contain;
 }
 
-#cameraInput { display:none; }
-#galleryInput { display:none; }
+#cameraInput, #galleryInput { display:none; }
 </style>
 </head>
 
 <body>
 
-<!-- 인트로 -->
 <div id="introScreen">
     <button id="introStartBtn"></button>
 </div>
 
-<!-- 메인 -->
 <div id="mainScreen">
 
     <div id="topArea">
-
-        <!-- ⭐ 지도 영역: 필요 시 삭제/재생성되는 부분 -->
-        <div id="map"></div>
+        <!-- ⭐ 지도는 iframe에서 렌더링됨 -->
+        <iframe id="mapFrame"></iframe>
 
         <div id="addrBox">
             <div id="road">도로명: 없음</div>
@@ -149,60 +119,22 @@ html, body {
 <input id="galleryInput" type="file" accept="image/*">
 
 <script>
-const KAKAO_JS_KEY = "c473f288616318b4fa69c041aaaed4c3";
-const KAKAO_REST_KEY = "83aa83329de094b2cf52a2e8a34206fa";
-
 /* 인트로 → 카메라 */
 introStartBtn.onclick = () => cameraInput.click();
 againBtn.onclick = () => cameraInput.click();
 openBtn.onclick = () => galleryInput.click();
 
-let map, marker;
+/* 카카오 REST 키 */
+const REST_KEY = "83aa83329de094b2cf52a2e8a34206fa";
 
-/* ============================
-   ⭐ 맵 초기화: 기존 map div 삭제 후 재생성
-============================ */
-function resetMap(){
-    const parent = document.getElementById("topArea");
-    const oldMap = document.getElementById("map");
-
-    if(oldMap) oldMap.remove(); // 삭제
-
-    const newMap = document.createElement("div");
-    newMap.id = "map";
-    newMap.style.width = "100%";
-    newMap.style.height = "70%";
-    newMap.style.borderRadius = "16px";
-    newMap.style.overflow = "hidden";
-    newMap.style.boxShadow = "0 4px 10px rgba(0,0,0,0.15)";
-
-    parent.prepend(newMap);
-}
-
-/* ✔ 카카오 지도 렌더링 */
-function showKakaoMap(lat, lon){
-    const container = document.getElementById('map');
-
-    map = new kakao.maps.Map(container, {
-        center: new kakao.maps.LatLng(lat, lon),
-        level: 3
-    });
-
-    marker = new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(lat, lon)
-    });
-
-    marker.setMap(map);
-}
-
-/* ✔ 카카오 주소 변환 */
+/* ✔ 주소 변환 */
 function fetchAddr(lat, lon){
     fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}`, {
-        headers:{ "Authorization": "KakaoAK " + KAKAO_REST_KEY }
+        headers:{ "Authorization": "KakaoAK " + REST_KEY }
     })
     .then(r=>r.json())
     .then(d=>{
-        if(!d.documents || !d.documents.length){
+        if(!d.documents.length){
             road.innerText = "도로명: 없음";
             jibun.innerText = "지번: 없음";
             return;
@@ -213,21 +145,17 @@ function fetchAddr(lat, lon){
     });
 }
 
-/* ✔ 사진 자동 저장 기능 */
-function autoSavePhoto() {
-    if (!photo.src) return;
-
+/* ✔ 사진 자동 저장 */
+function autoSavePhoto(){
     const a = document.createElement("a");
     a.href = photo.src;
     a.download = `photo_${Date.now()}.jpg`;
-    document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
 }
 
-/* ============================
-   📸 사진 파일 공통 처리 함수
-============================ */
+/* ===========================
+   📸 공통 이미지 처리 함수
+=========================== */
 function handleImageFile(file, autoSave = false){
     if(!file) return;
 
@@ -240,52 +168,45 @@ function handleImageFile(file, autoSave = false){
         let lonRef = EXIF.getTag(this,"GPSLongitudeRef") || "E";
 
         if(!lat || !lon){
-            alert("GPS 정보가 없습니다.");
+            alert("GPS 정보 없음");
             return;
         }
 
         introScreen.style.display="none";
         mainScreen.style.display="block";
 
-        // ⭐ 지도 완전 초기화 후 다시 생성
-        resetMap();
-
         const toDec = v => v[0] + v[1]/60 + v[2]/3600;
 
-        let latitude = toDec(lat);
+        let latitude  = toDec(lat);
         let longitude = toDec(lon);
 
-        if(latRef==="S") latitude = -latitude;
+        if(latRef==="S") latitude  = -latitude;
         if(lonRef==="W") longitude = -longitude;
 
-        showKakaoMap(latitude, longitude);
+        /* ⭐ iframe에 map.html + 좌표 전달 */
+        mapFrame.src = `map.html?lat=${latitude}&lon=${longitude}`;
+
         fetchAddr(latitude, longitude);
 
         if(autoSave) autoSavePhoto();
     });
 }
 
-/* ✔ 카메라 → 자동 저장 O */
+/* ✔ 카메라 */
 cameraInput.addEventListener("change", e=>{
     handleImageFile(e.target.files[0], true);
 });
 
-/* ✔ 갤러리에서 사진 불러오기 → 자동 저장 X */
+/* ✔ 갤러리 */
 galleryInput.addEventListener("change", e=>{
     handleImageFile(e.target.files[0], false);
 });
 
 /* ✔ 주소 복사 */
 copyBtn.onclick = () => {
-    const txt = road.innerText + "\n" + jibun.innerText;
-    navigator.clipboard.writeText(txt);
+    navigator.clipboard.writeText(`${road.innerText}\n${jibun.innerText}`);
     alert("주소 복사됨!");
 };
-
-/* ✔ PWA */
-if("serviceWorker" in navigator){
-    navigator.serviceWorker.register("service-worker.js");
-}
 </script>
 
 </body>
