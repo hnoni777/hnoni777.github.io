@@ -123,11 +123,13 @@ html, body {
 <div id="mainScreen">
 
     <div id="topArea">
+
+        <!-- ⭐ 지도 영역: 필요 시 삭제/재생성되는 부분 -->
         <div id="map"></div>
 
         <div id="addrBox">
-            <div id="road">도로명: -</div>
-            <div id="jibun">지번: -</div>
+            <div id="road">도로명: 없음</div>
+            <div id="jibun">지번: 없음</div>
 
             <div class="btn-wrap">
                 <button class="btn" id="copyBtn">주소 복사</button>
@@ -156,6 +158,26 @@ againBtn.onclick = () => cameraInput.click();
 openBtn.onclick = () => galleryInput.click();
 
 let map, marker;
+
+/* ============================
+   ⭐ 맵 초기화: 기존 map div 삭제 후 재생성
+============================ */
+function resetMap(){
+    const parent = document.getElementById("topArea");
+    const oldMap = document.getElementById("map");
+
+    if(oldMap) oldMap.remove(); // 삭제
+
+    const newMap = document.createElement("div");
+    newMap.id = "map";
+    newMap.style.width = "100%";
+    newMap.style.height = "70%";
+    newMap.style.borderRadius = "16px";
+    newMap.style.overflow = "hidden";
+    newMap.style.boxShadow = "0 4px 10px rgba(0,0,0,0.15)";
+
+    parent.prepend(newMap);
+}
 
 /* ✔ 카카오 지도 렌더링 */
 function showKakaoMap(lat, lon){
@@ -225,6 +247,9 @@ function handleImageFile(file, autoSave = false){
         introScreen.style.display="none";
         mainScreen.style.display="block";
 
+        // ⭐ 지도 완전 초기화 후 다시 생성
+        resetMap();
+
         const toDec = v => v[0] + v[1]/60 + v[2]/3600;
 
         let latitude = toDec(lat);
@@ -240,14 +265,14 @@ function handleImageFile(file, autoSave = false){
     });
 }
 
-/* ✔ 카메라로 촬영한 사진 */
+/* ✔ 카메라 → 자동 저장 O */
 cameraInput.addEventListener("change", e=>{
-    handleImageFile(e.target.files[0], true); // 자동 저장 ON
+    handleImageFile(e.target.files[0], true);
 });
 
-/* ✔ 갤러리에서 사진 불러오기 */
+/* ✔ 갤러리에서 사진 불러오기 → 자동 저장 X */
 galleryInput.addEventListener("change", e=>{
-    handleImageFile(e.target.files[0], false); // 자동 저장 없음
+    handleImageFile(e.target.files[0], false);
 });
 
 /* ✔ 주소 복사 */
