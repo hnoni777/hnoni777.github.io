@@ -131,7 +131,6 @@ html, body {
             <div class="btn-wrap">
                 <button class="btn" id="copyBtn">주소 복사</button>
                 <button class="btn" id="againBtn">다시 촬영</button>
-                <!-- 사진 저장 버튼 제거됨 -->
             </div>
         </div>
     </div>
@@ -188,6 +187,18 @@ function fetchAddr(lat, lon){
     });
 }
 
+/* ✔ 사진 자동 저장 기능 */
+function autoSavePhoto() {
+    if (!photo.src) return;
+
+    const a = document.createElement("a");
+    a.href = photo.src;
+    a.download = `photo_${Date.now()}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
 /* ✔ 사진 촬영 → 위치 읽기 */
 cameraInput.addEventListener("change", e=>{
     const file = e.target.files[0];
@@ -219,6 +230,9 @@ cameraInput.addEventListener("change", e=>{
 
         showKakaoMap(latitude, longitude);
         fetchAddr(latitude, longitude);
+
+        /* ✔ 사진 찍으면 바로 자동 저장 */
+        autoSavePhoto();
     });
 });
 
@@ -228,8 +242,6 @@ copyBtn.onclick = () => {
     navigator.clipboard.writeText(txt);
     alert("주소 복사됨!");
 };
-
-/* 사진 저장 기능 완전히 삭제됨 */
 
 /* PWA */
 if("serviceWorker" in navigator){
