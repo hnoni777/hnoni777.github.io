@@ -237,6 +237,12 @@ copyBtn.onclick = () => {
     alert("주소가 복사되었습니다!");
 };
 </script>
-
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').then(reg => {
+        reg.update(); // ⭐ 설치앱이 구버전 유지하는 문제 강제 해결
+    });
+}
+</script>
 </body>
 </html>
