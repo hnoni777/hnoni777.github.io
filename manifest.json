@@ -1,6 +1,6 @@
 {
   "name": "대형폐기물 위치공유",
-  "short_name": "위치공유",
+  "short_name": "대형폐기물 위치공유",
   "description": "대형폐기물 사진 촬영 후 주소 자동 표시 앱",
   "start_url": "./index.html",
   "display": "standalone",
