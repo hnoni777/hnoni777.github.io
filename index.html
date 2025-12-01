@@ -108,6 +108,7 @@ html, body {
 }
 
 #cameraInput { display:none; }
+#galleryInput { display:none; }
 </style>
 </head>
 
@@ -131,6 +132,7 @@ html, body {
             <div class="btn-wrap">
                 <button class="btn" id="copyBtn">주소 복사</button>
                 <button class="btn" id="againBtn">다시 촬영</button>
+                <button class="btn" id="openBtn">사진 열기</button>
             </div>
         </div>
     </div>
@@ -142,6 +144,7 @@ html, body {
 </div>
 
 <input id="cameraInput" type="file" accept="image/*" capture="environment">
+<input id="galleryInput" type="file" accept="image/*">
 
 <script>
 const KAKAO_JS_KEY = "c473f288616318b4fa69c041aaaed4c3";
@@ -150,6 +153,7 @@ const KAKAO_REST_KEY = "83aa83329de094b2cf52a2e8a34206fa";
 /* 인트로 → 카메라 */
 introStartBtn.onclick = () => cameraInput.click();
 againBtn.onclick = () => cameraInput.click();
+openBtn.onclick = () => galleryInput.click();
 
 let map, marker;
 
@@ -199,9 +203,10 @@ function autoSavePhoto() {
     document.body.removeChild(a);
 }
 
-/* ✔ 사진 촬영 → 위치 읽기 */
-cameraInput.addEventListener("change", e=>{
-    const file = e.target.files[0];
+/* ============================
+   📸 사진 파일 공통 처리 함수
+============================ */
+function handleImageFile(file, autoSave = false){
     if(!file) return;
 
     photo.src = URL.createObjectURL(file);
@@ -213,7 +218,7 @@ cameraInput.addEventListener("change", e=>{
         let lonRef = EXIF.getTag(this,"GPSLongitudeRef") || "E";
 
         if(!lat || !lon){
-            alert("GPS 정보가 없습니다. 위치정보 허용 후 다시 촬영해주세요.");
+            alert("GPS 정보가 없습니다.");
             return;
         }
 
@@ -231,19 +236,28 @@ cameraInput.addEventListener("change", e=>{
         showKakaoMap(latitude, longitude);
         fetchAddr(latitude, longitude);
 
-        /* ✔ 사진 찍으면 바로 자동 저장 */
-        autoSavePhoto();
+        if(autoSave) autoSavePhoto();
     });
+}
+
+/* ✔ 카메라로 촬영한 사진 */
+cameraInput.addEventListener("change", e=>{
+    handleImageFile(e.target.files[0], true); // 자동 저장 ON
 });
 
-/* 주소 복사 */
+/* ✔ 갤러리에서 사진 불러오기 */
+galleryInput.addEventListener("change", e=>{
+    handleImageFile(e.target.files[0], false); // 자동 저장 없음
+});
+
+/* ✔ 주소 복사 */
 copyBtn.onclick = () => {
     const txt = road.innerText + "\n" + jibun.innerText;
     navigator.clipboard.writeText(txt);
     alert("주소 복사됨!");
 };
 
-/* PWA */
+/* ✔ PWA */
 if("serviceWorker" in navigator){
     navigator.serviceWorker.register("service-worker.js");
 }
