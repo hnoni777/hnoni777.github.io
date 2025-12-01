@@ -184,7 +184,7 @@ function handleImageFile(file, autoSave = false){
         if(lonRef==="W") longitude = -longitude;
 
         /* ⭐ iframe에 map.html + 좌표 전달 */
-        mapFrame.src = `map.html?lat=${latitude}&lon=${longitude}`;
+        mapFrame.src = `map.html?lat=${latitude}&lon=${longitude}&t=${Date.now()}`;
 
         fetchAddr(latitude, longitude);
 
