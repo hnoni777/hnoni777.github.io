@@ -43,7 +43,6 @@ html, body {
     height:9%;
     background:rgba(0,0,0,0);
     border:none;
-   /* cursor:pointer; */
 }
 
 /* ============================
@@ -132,7 +131,7 @@ html, body {
             <div class="btn-wrap">
                 <button class="btn" id="copyBtn">주소 복사</button>
                 <button class="btn" id="againBtn">다시 촬영</button>
-                <button class="btn" id="savePhotoBtn">사진 저장</button>
+                <!-- 사진 저장 버튼 제거됨 -->
             </div>
         </div>
     </div>
@@ -230,14 +229,7 @@ copyBtn.onclick = () => {
     alert("주소 복사됨!");
 };
 
-/* 사진 저장 */
-savePhotoBtn.onclick = () => {
-    if(!photo.src) return alert("사진 없음");
-    const a = document.createElement("a");
-    a.href = photo.src;
-    a.download = `photo_${Date.now()}.jpg`;
-    a.click();
-};
+/* 사진 저장 기능 완전히 삭제됨 */
 
 /* PWA */
 if("serviceWorker" in navigator){
