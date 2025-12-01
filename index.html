@@ -9,10 +9,10 @@
 <!-- PWA manifest -->
 <link rel="manifest" href="manifest.json">
 
-<!-- Pretendard 폰트 -->
+<!-- Pretendard -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
 
-<!-- 카카오맵 SDK (JS 키) -->
+<!-- Kakao Map SDK -->
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa69c041aaaed4c3&libraries=services"></script>
 
 <!-- EXIF -->
@@ -23,75 +23,21 @@ html, body {
     margin: 0;
     padding: 0;
     height: 100%;
-    overflow: hidden;              /* 스크롤 방지 */
-    font-family: 'Pretendard', sans-serif;
+    overflow: hidden;
     background: #f3f5f9;
-    -webkit-font-smoothing: antialiased;
+    font-family: 'Pretendard', sans-serif;
 }
 
-/* ---------------- 인트로 화면 ---------------- */
+/* 인트로 전체 화면 */
 #introScreen {
     position: fixed;
     inset: 0;
-    background: linear-gradient(145deg, #2563eb, #1d4ed8);
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    background: url('intro.png') center/cover no-repeat;
     z-index: 9999;
-}
-
-.intro-title {
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    margin-bottom: 6px;
-}
-
-.intro-sub {
-    font-size: 14px;
-    opacity: 0.9;
-    margin-bottom: 40px;
-}
-
-/* 둥근 카메라 버튼 */
-#introStartBtn {
-    width: 84px;
-    height: 84px;
-    border-radius: 50%;
-    border: none;
-    background: radial-gradient(circle at 30% 30%, #ffffff, #dbeafe);
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.35);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     cursor: pointer;
-    position: relative;
-}
-#introStartBtn::before {
-    content: "";
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    border: 3px solid #2563eb;
-    box-sizing: border-box;
-}
-#introStartBtn::after {
-    content: "📷";
-    position: absolute;
-    font-size: 26px;
 }
 
-/* 인트로 하단 안내 */
-.intro-tip {
-    position: absolute;
-    bottom: 40px;
-    font-size: 13px;
-    opacity: 0.85;
-}
-
-/* ---------------- 메인 화면 ---------------- */
+/* 메인 화면 */
 #mainScreen {
     display: none;
     height: 100%;
@@ -99,20 +45,11 @@ html, body {
     flex-direction: column;
 }
 
-/* 위쪽 영역: 지도 + 주소 + 버튼 */
+/* 상단 영역 */
 #topArea {
     height: 50vh;
     padding: 10px 14px 6px;
     box-sizing: border-box;
-}
-
-/* 아래쪽 영역: 사진 미리보기 */
-#bottomArea {
-    height: 50vh;
-    background: #0f172a;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 /* 지도 카드 */
@@ -121,65 +58,59 @@ html, body {
     height: 68%;
     background: #fff;
     border-radius: 20px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.1);
     overflow: hidden;
     position: relative;
 }
-#map {
-    width: 100%;
-    height: 100%;
-}
+#map { width: 100%; height: 100%; }
+
 #map-loading {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 13px;
     color: #2563eb;
-    animation: blink 1.2s infinite;
-}
-@keyframes blink {
-    0% { opacity: .3; }
-    50% { opacity: 1; }
-    100% { opacity: .3; }
+    font-size: 14px;
 }
 
 /* 주소 카드 */
 #addrBox {
     margin-top: 10px;
-    background: #ffffff;
-    border-radius: 16px;
     padding: 10px 12px;
+    background: #fff;
+    border-radius: 16px;
     box-shadow: 0 3px 10px rgba(0,0,0,0.07);
     font-size: 14px;
-    line-height: 1.4;
-}
-#addrBox b {
-    color: #2563eb;
 }
 
-/* 버튼 영역 */
+/* 버튼 row */
 .btn-row {
     margin-top: 8px;
     display: flex;
     gap: 8px;
 }
+
 .btn {
     flex: 1;
     padding: 9px 0;
-    border-radius: 10px;
     border: none;
+    border-radius: 10px;
     background: #2563eb;
     color: #fff;
     font-size: 13px;
     font-weight: 600;
     box-shadow: 0 3px 10px rgba(37,99,235,0.3);
 }
-.btn:active {
-    transform: scale(0.97);
+.btn:active { transform: scale(0.97); }
+
+/* 사진 영역 (하단) */
+#bottomArea {
+    height: 50vh;
+    background: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* 하단 사진 */
 #photo {
     width: 100%;
     height: 100%;
@@ -187,27 +118,18 @@ html, body {
 }
 
 /* 카메라 input 숨김 */
-#cameraInput {
-    display: none;
-}
+#cameraInput { display: none; }
 </style>
 </head>
 
 <body>
 
-<!-- 인트로 화면 -->
-<div id="introScreen">
-    <div class="intro-title">대형폐기물 위치공유</div>
-    <div class="intro-sub">사진 촬영으로 위치와 주소를 한 번에</div>
-    
-    <button id="introStartBtn"></button>
-    
-    <div class="intro-tip">화면을 터치해 촬영을 시작하세요</div>
-</div>
+<!-- 인트로 화면 (터치 전체 → 촬영) -->
+<div id="introScreen"></div>
 
 <!-- 메인 화면 -->
 <div id="mainScreen">
-    <!-- 위쪽: 지도 + 주소 + 버튼 -->
+
     <div id="topArea">
         <div id="mapCard">
             <div id="map-loading">지도 불러오는 중...</div>
@@ -215,8 +137,8 @@ html, body {
         </div>
 
         <div id="addrBox">
-            <div><b>도로명</b> <span id="road">없음</span></div>
-            <div><b>지번</b> <span id="jibun">없음</span></div>
+            <div><b>도로명:</b> <span id="road">없음</span></div>
+            <div><b>지번:</b> <span id="jibun">없음</span></div>
 
             <div class="btn-row">
                 <button class="btn" id="copyBtn">주소 복사</button>
@@ -225,10 +147,10 @@ html, body {
         </div>
     </div>
 
-    <!-- 아래쪽: 사진 -->
     <div id="bottomArea">
         <img id="photo" src="">
     </div>
+
 </div>
 
 <!-- 카메라 -->
@@ -237,27 +159,26 @@ html, body {
 <script>
 const REST_KEY = "83aa83329de094b2cf52a2e8a34206fa";
 
-let map = null;
-let marker = null;
-
-/* 인트로 → 카메라 실행 */
 const introScreen = document.getElementById("introScreen");
-const introStartBtn = document.getElementById("introStartBtn");
 const mainScreen = document.getElementById("mainScreen");
 const cameraInput = document.getElementById("cameraInput");
 const photo = document.getElementById("photo");
 
-introStartBtn.addEventListener("click", () => {
+let map = null;
+let marker = null;
+
+/* 인트로 화면 터치 → 카메라 실행 */
+introScreen.addEventListener("click", () => {
     cameraInput.click();
 });
 
-/* 다시 촬영 버튼 */
-document.getElementById("againBtn").addEventListener("click", () => {
-    cameraInput.value = ""; // 같은 파일도 다시 선택 가능하게
+/* 다시 촬영 */
+againBtn.onclick = () => {
+    cameraInput.value = "";
     cameraInput.click();
-});
+};
 
-/* 지도 생성 또는 위치 이동 */
+/* 지도 초기화/업데이트 */
 function updateMap(lat, lon) {
     const pos = new kakao.maps.LatLng(lat, lon);
 
@@ -273,7 +194,6 @@ function updateMap(lat, lon) {
         marker.setPosition(pos);
     }
 
-    // 로딩 문구 숨기기
     document.getElementById("map-loading").style.display = "none";
 }
 
@@ -283,90 +203,71 @@ function fetchAddr(lat, lon) {
         headers: { "Authorization": "KakaoAK " + REST_KEY }
     })
     .then(r => r.json())
-    .then(d => {
-        if (!d.documents || !d.documents.length) {
-            road.innerText = "없음";
-            jibun.innerText = "없음";
-            return;
-        }
-        const info = d.documents[0];
+    .then(data => {
+        if (!data.documents.length) return;
+        const info = data.documents[0];
         road.innerText  = info.road_address?.address_name ?? "없음";
         jibun.innerText = info.address?.address_name ?? "없음";
-    })
-    .catch(() => {
-        road.innerText  = "오류";
-        jibun.innerText = "오류";
     });
 }
 
 /* 자동 저장 */
-function autoSavePhoto() {
-    if (!photo.src) return;
+function autoSave() {
     const a = document.createElement("a");
     a.href = photo.src;
-    a.download = `photo_${Date.now()}.jpg`;
-    document.body.appendChild(a);
+    a.download = "photo_" + Date.now() + ".jpg";
     a.click();
-    document.body.removeChild(a);
 }
 
-/* 사진 처리 (촬영 결과) */
-function handleCameraFile(file) {
-    if (!file) return;
-
+/* 파일 처리 */
+function handleFile(file) {
     EXIF.getData(file, function() {
-        const lat  = EXIF.getTag(file, "GPSLatitude");
-        const lon  = EXIF.getTag(file, "GPSLongitude");
+        const lat = EXIF.getTag(file, "GPSLatitude");
+        const lon = EXIF.getTag(file, "GPSLongitude");
         const latR = EXIF.getTag(file, "GPSLatitudeRef") || "N";
         const lonR = EXIF.getTag(file, "GPSLongitudeRef") || "E";
 
         if (!lat || !lon) {
-            alert("이 사진에는 GPS 위치 정보가 없습니다.");
+            alert("이 사진은 위치 정보를 포함하지 않습니다");
             return;
         }
 
-        const toDec = v => v[0] + v[1] / 60 + v[2] / 3600;
+        const convert = v => v[0] + v[1]/60 + v[2]/3600;
+        let la = convert(lat);
+        let lo = convert(lon);
 
-        let latitude  = toDec(lat);
-        let longitude = toDec(lon);
+        if (latR === "S") la = -la;
+        if (lonR === "W") lo = -lo;
 
-        if (latR === "S") latitude  = -latitude;
-        if (lonR === "W") longitude = -longitude;
-
-        // 인트로 → 메인 전환
         introScreen.style.display = "none";
-        mainScreen.style.display  = "flex";
+        mainScreen.style.display = "flex";
 
-        // 지도 업데이트 & 주소 표시
-        updateMap(latitude, longitude);
-        fetchAddr(latitude, longitude);
+        updateMap(la, lo);
+        fetchAddr(la, lo);
 
-        // 사진 미리보기
         photo.src = URL.createObjectURL(file);
-
-        // 자동 저장
-        autoSavePhoto();
+        autoSave();
     });
 }
 
-/* 카메라 변경 이벤트 */
-cameraInput.addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    handleCameraFile(file);
+/* input change */
+cameraInput.addEventListener("change", e => {
+    if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+    }
 });
 
-/* 주소 복사 버튼 */
-document.getElementById("copyBtn").addEventListener("click", () => {
-    const text = `도로명: ${road.innerText}\n지번: ${jibun.innerText}`;
-    navigator.clipboard.writeText(text);
-    alert("주소가 복사되었습니다.");
-});
+/* 주소 복사 */
+copyBtn.onclick = () => {
+    navigator.clipboard.writeText(
+        `도로명: ${road.innerText}\n지번: ${jibun.innerText}`
+    );
+    alert("주소 복사 완료");
+};
 
-/* 서비스워커 등록 (PWA) */
+/* 서비스워커 */
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').then(reg => {
-        reg.update();
-    });
+    navigator.serviceWorker.register('service-worker.js').then(reg => reg.update());
 }
 </script>
 
