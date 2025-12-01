@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>대형폐기물 위치공유</title>
 
-<!-- EXIF -->
+<!-- ✔ 카카오맵 SDK -->
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa69c041aaaed4c3&libraries=services"></script>
+
+<!-- ✔ EXIF -->
 <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 
 <style>
@@ -16,6 +19,7 @@ html, body {
     font-family:'Pretendard', sans-serif;
 }
 
+/* 인트로 */
 #introScreen {
     position:fixed;
     top:0; left:0;
@@ -33,6 +37,7 @@ html, body {
     border:none;
 }
 
+/* 메인 */
 #mainScreen {
     width:100%; height:100%;
     display:none;
@@ -44,11 +49,11 @@ html, body {
     padding:10px;
 }
 
-#mapFrame {
+#map {
     width:100%;
     height:70%;
-    border:0;
     border-radius:16px;
+    overflow:hidden;
     box-shadow:0 4px 10px rgba(0,0,0,0.15);
 }
 
@@ -86,27 +91,29 @@ html, body {
 }
 
 #photo {
-    width:100%;
-    height:100%;
+    width:100%; height:100%;
     object-fit:contain;
 }
 
-#cameraInput, #galleryInput { display:none; }
+#cameraInput,
+#galleryInput {
+    display:none;
+}
 </style>
 </head>
 
 <body>
 
-<!-- 인트로 -->
+<!-- 인트로 화면 -->
 <div id="introScreen">
     <button id="introStartBtn"></button>
 </div>
 
-<!-- 메인 -->
+<!-- 메인 화면 -->
 <div id="mainScreen">
 
     <div id="topArea">
-        <iframe id="mapFrame"></iframe>
+        <div id="map"></div>
 
         <div id="addrBox">
             <div id="road">도로명: 없음</div>
@@ -126,25 +133,42 @@ html, body {
 
 </div>
 
+<!-- 입력 -->
 <input id="cameraInput" type="file" accept="image/*" capture="environment">
 <input id="galleryInput" type="file" accept="image/*">
 
 <script>
-// 카카오 로컬 REST KEY
 const REST_KEY = "83aa83329de094b2cf52a2e8a34206fa";
 
-/* 인트로 → 카메라 */
 introStartBtn.onclick = () => cameraInput.click();
 againBtn.onclick      = () => cameraInput.click();
 openBtn.onclick       = () => galleryInput.click();
+
+let map = null;
+let marker = null;
+
+/* ⭐ 지도 1번만 생성 */
+function initMap(lat, lon) {
+    const container = document.getElementById('map');
+    const pos = new kakao.maps.LatLng(lat, lon);
+
+    if (!map) {
+        map = new kakao.maps.Map(container, { center: pos, level: 3 });
+        marker = new kakao.maps.Marker({ position: pos });
+        marker.setMap(map);
+    } else {
+        map.setCenter(pos);
+        marker.setPosition(pos);
+    }
+}
 
 /* 주소 변환 */
 function fetchAddr(lat, lon){
     fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}`, {
         headers:{ "Authorization": "KakaoAK " + REST_KEY }
     })
-    .then(r=>r.json())
-    .then(d=>{
+    .then(r => r.json())
+    .then(d => {
         if(!d.documents.length){
             road.innerText  = "도로명: 없음";
             jibun.innerText = "지번: 없음";
@@ -156,20 +180,23 @@ function fetchAddr(lat, lon){
     });
 }
 
-/* iframe 지도 갱신 */
-function renderMap(lat, lon){
-    mapFrame.src = `map.html?lat=${lat}&lon=${lon}&v=${Date.now()}`;
+/* 자동 저장 */
+function autoSavePhoto(){
+    const a = document.createElement("a");
+    a.href = photo.src;
+    a.download = `photo_${Date.now()}.jpg`;
+    a.click();
 }
 
-/* 사진 처리 함수 */
-function handleImageFile(file, autoSave = false){
+/* ⭐ 사진 공통 처리 */
+function handleFile(file, autoSave=false){
     if(!file) return;
 
     EXIF.getData(file, function(){
-        let lat = EXIF.getTag(this,"GPSLatitude");
-        let lon = EXIF.getTag(this,"GPSLongitude");
-        let latRef = EXIF.getTag(this,"GPSLatitudeRef") || "N";
-        let lonRef = EXIF.getTag(this,"GPSLongitudeRef") || "E";
+        const lat  = EXIF.getTag(this,"GPSLatitude");
+        const lon  = EXIF.getTag(this,"GPSLongitude");
+        const latR = EXIF.getTag(this,"GPSLatitudeRef") || "N";
+        const lonR = EXIF.getTag(this,"GPSLongitudeRef") || "E";
 
         if(!lat || !lon){
             alert("GPS 정보 없음");
@@ -177,33 +204,35 @@ function handleImageFile(file, autoSave = false){
         }
 
         const toDec = v => v[0] + v[1]/60 + v[2]/3600;
+
         let latitude  = toDec(lat);
         let longitude = toDec(lon);
 
-        if(latRef==="S") latitude  = -latitude;
-        if(lonRef==="W") longitude = -longitude;
+        if(latR==="S") latitude  = -latitude;
+        if(lonR==="W") longitude = -longitude;
 
         introScreen.style.display = "none";
         mainScreen.style.display  = "block";
 
-        // ⭐ iframe 업데이트 (캐시 무효화 포함)
-        renderMap(latitude, longitude);
+        /* ⭐ 지도 순간 이동 */
+        initMap(latitude, longitude);
 
         fetchAddr(latitude, longitude);
 
-        // 사진 미리보기
         photo.src = URL.createObjectURL(file);
+
+        if(autoSave) autoSavePhoto();
     });
 }
 
-/* 카메라 */
+/* 촬영 */
 cameraInput.addEventListener("change", e=>{
-    handleImageFile(e.target.files[0], true);
+    handleFile(e.target.files[0], true);
 });
 
 /* 갤러리 */
 galleryInput.addEventListener("change", e=>{
-    handleImageFile(e.target.files[0], false);
+    handleFile(e.target.files[0], false);
 });
 
 /* 주소 복사 */
