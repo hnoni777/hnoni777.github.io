@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0C1724">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>대형폐기물 위치공유</title>
@@ -263,6 +265,10 @@ document.getElementById("copy").onclick = () => {
     alert("주소 복사됨");
 };
 </script>
-
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
+}
+</script>
 </body>
 </html>
