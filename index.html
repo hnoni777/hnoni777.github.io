@@ -9,6 +9,9 @@
 <!-- PWA manifest -->
 <link rel="manifest" href="manifest.json">
 
+<!-- intro 이미지 미리 로드 (깜빡임 줄이기) -->
+<link rel="preload" href="intro.png" as="image">
+
 <!-- Pretendard -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
 
@@ -26,9 +29,10 @@ html, body {
     overflow: hidden;
     background: #f3f5f9;
     font-family: 'Pretendard', sans-serif;
+    -webkit-font-smoothing: antialiased;
 }
 
-/* 인트로 전체 화면 */
+/* 인트로 전체 화면 (터치 → 촬영) */
 #introScreen {
     position: fixed;
     inset: 0;
@@ -39,13 +43,13 @@ html, body {
 
 /* 메인 화면 */
 #mainScreen {
-    display: none;
+    display: none !important;          /* ← 처음엔 절대 안 보이게 */
     height: 100%;
     display: flex;
     flex-direction: column;
 }
 
-/* 상단 영역 */
+/* 상단 영역 (지도 + 주소 + 버튼) */
 #topArea {
     height: 50vh;
     padding: 10px 14px 6px;
@@ -55,18 +59,22 @@ html, body {
 /* 지도 카드 */
 #mapCard {
     width: 100%;
-    height: 75%;
+    height: 68%;
     background: #fff;
     border-radius: 20px;
     box-shadow: 0 6px 16px rgba(0,0,0,0.1);
     overflow: hidden;
     position: relative;
 }
-#map { width: 100%; height: 100%; }
+#map {
+    width: 100%;
+    height: 100%;
+}
 
 #map-loading {
     position: absolute;
-    top: 50%; left: 50%;
+    top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
     color: #2563eb;
     font-size: 14px;
@@ -75,42 +83,46 @@ html, body {
 /* 주소 카드 */
 #addrBox {
     margin-top: 10px;
-    padding: 10px 12px;
-    background: #fff;
+    background: #ffffff;
     border-radius: 16px;
+    padding: 10px 12px;
     box-shadow: 0 3px 10px rgba(0,0,0,0.07);
     font-size: 14px;
+    line-height: 1.4;
+}
+#addrBox b {
+    color: #2563eb;
 }
 
-/* 버튼 row */
+/* 버튼 영역 */
 .btn-row {
     margin-top: 8px;
     display: flex;
     gap: 8px;
 }
-
 .btn {
     flex: 1;
     padding: 9px 0;
-    border: none;
     border-radius: 10px;
+    border: none;
     background: #2563eb;
     color: #fff;
     font-size: 13px;
     font-weight: 600;
     box-shadow: 0 3px 10px rgba(37,99,235,0.3);
 }
-.btn:active { transform: scale(0.97); }
-
-/* 사진 영역 (하단) */
-#bottomArea {
-    height: 45vh;
-    background: #0f172a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.btn:active {
+    transform: scale(0.97);
 }
 
+/* 하단 사진 영역 */
+#bottomArea {
+    height: 50vh;
+    background: #0f172a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 #photo {
     width: 100%;
     height: 100%;
@@ -118,13 +130,15 @@ html, body {
 }
 
 /* 카메라 input 숨김 */
-#cameraInput { display: none; }
+#cameraInput {
+    display: none;
+}
 </style>
 </head>
 
 <body>
 
-<!-- 인트로 화면 (터치 전체 → 촬영) -->
+<!-- 인트로 화면 (전체 터치 → 촬영) -->
 <div id="introScreen"></div>
 
 <!-- 메인 화면 -->
@@ -163,6 +177,10 @@ const introScreen = document.getElementById("introScreen");
 const mainScreen = document.getElementById("mainScreen");
 const cameraInput = document.getElementById("cameraInput");
 const photo = document.getElementById("photo");
+const copyBtn = document.getElementById("copyBtn");
+const againBtn = document.getElementById("againBtn");
+const road = document.getElementById("road");
+const jibun = document.getElementById("jibun");
 
 let map = null;
 let marker = null;
@@ -172,13 +190,13 @@ introScreen.addEventListener("click", () => {
     cameraInput.click();
 });
 
-/* 다시 촬영 */
-againBtn.onclick = () => {
+/* 다시 촬영 버튼 */
+againBtn.addEventListener("click", () => {
     cameraInput.value = "";
     cameraInput.click();
-};
+});
 
-/* 지도 초기화/업데이트 */
+/* 지도 생성/업데이트 */
 function updateMap(lat, lon) {
     const pos = new kakao.maps.LatLng(lat, lon);
 
@@ -197,77 +215,90 @@ function updateMap(lat, lon) {
     document.getElementById("map-loading").style.display = "none";
 }
 
-/* 주소 변환 */
+/* 좌표 → 주소 */
 function fetchAddr(lat, lon) {
     fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}`, {
         headers: { "Authorization": "KakaoAK " + REST_KEY }
     })
     .then(r => r.json())
     .then(data => {
-        if (!data.documents.length) return;
+        if (!data.documents || !data.documents.length) return;
         const info = data.documents[0];
         road.innerText  = info.road_address?.address_name ?? "없음";
         jibun.innerText = info.address?.address_name ?? "없음";
+    })
+    .catch(() => {
+        road.innerText  = "오류";
+        jibun.innerText = "오류";
     });
 }
 
-/* 자동 저장 */
+/* 사진 자동 저장 */
 function autoSave() {
+    if (!photo.src) return;
     const a = document.createElement("a");
     a.href = photo.src;
-    a.download = "photo_" + Date.now() + ".jpg";
+    a.download = `photo_${Date.now()}.jpg`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
 }
 
-/* 파일 처리 */
+/* 사진 파일 처리 */
 function handleFile(file) {
+    if (!file) return;
+
     EXIF.getData(file, function() {
-        const lat = EXIF.getTag(file, "GPSLatitude");
-        const lon = EXIF.getTag(file, "GPSLongitude");
+        const lat  = EXIF.getTag(file, "GPSLatitude");
+        const lon  = EXIF.getTag(file, "GPSLongitude");
         const latR = EXIF.getTag(file, "GPSLatitudeRef") || "N";
         const lonR = EXIF.getTag(file, "GPSLongitudeRef") || "E";
 
         if (!lat || !lon) {
-            alert("이 사진은 위치 정보를 포함하지 않습니다");
+            alert("이 사진은 위치 정보를 포함하지 않습니다.");
             return;
         }
 
-        const convert = v => v[0] + v[1]/60 + v[2]/3600;
-        let la = convert(lat);
-        let lo = convert(lon);
+        const toDec = v => v[0] + v[1] / 60 + v[2] / 3600;
+
+        let la = toDec(lat);
+        let lo = toDec(lon);
 
         if (latR === "S") la = -la;
         if (lonR === "W") lo = -lo;
 
+        // 인트로 → 메인 전환
         introScreen.style.display = "none";
-        mainScreen.style.display = "flex";
+        mainScreen.style.display  = "flex";
 
+        // 지도/주소 업데이트
         updateMap(la, lo);
         fetchAddr(la, lo);
 
+        // 사진 미리보기
         photo.src = URL.createObjectURL(file);
+
+        // 자동 저장
         autoSave();
     });
 }
 
-/* input change */
-cameraInput.addEventListener("change", e => {
-    if (e.target.files.length > 0) {
-        handleFile(e.target.files[0]);
-    }
+/* 카메라 input 변경 이벤트 */
+cameraInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    handleFile(file);
 });
 
 /* 주소 복사 */
-copyBtn.onclick = () => {
-    navigator.clipboard.writeText(
-        `도로명: ${road.innerText}\n지번: ${jibun.innerText}`
-    );
+copyBtn.addEventListener("click", () => {
+    const text = `도로명: ${road.innerText}\n지번: ${jibun.innerText}`;
+    navigator.clipboard.writeText(text);
     alert("주소 복사 완료");
-};
+});
 
-/* 서비스워커 */
+/* 서비스워커 (업데이트 강제 제거) */
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').then(reg => reg.update());
+    navigator.serviceWorker.register('service-worker.js');
 }
 </script>
 
