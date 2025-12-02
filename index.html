@@ -15,12 +15,14 @@
         font-family: Pretendard, sans-serif;
     }
 
-    /* 인트로 화면 */
+    /* 인트로 */
     #intro {
-        position: absolute;
+        position: fixed;
+        top: 0; left: 0;
         width: 100%;
         height: 100%;
-        z-index: 10;
+        z-index: 20;
+        transition: opacity 0.3s;
     }
     #intro img {
         width: 100%;
@@ -32,16 +34,17 @@
     #main {
         width: 100%;
         height: 100%;
-        padding: 10px;
+        padding: 12px;
         box-sizing: border-box;
         opacity: 0;
         pointer-events: none;
+        transition: opacity 0.3s;
     }
 
     /* 지도 */
     #map {
         width: 100%;
-        height: 230px;
+        height: 240px;
         border-radius: 18px;
         background: #444;
         margin-bottom: 10px;
@@ -52,7 +55,7 @@
     #address {
         background: #fff;
         border-radius: 14px;
-        padding: 10px 15px;
+        padding: 12px 15px;
         font-size: 15px;
         margin-bottom: 10px;
     }
@@ -60,12 +63,12 @@
     /* 버튼 */
     #btnBox {
         display: flex;
-        gap: 8px;
+        gap: 10px;
         margin-bottom: 10px;
     }
     .btn {
         flex: 1;
-        padding: 8px 0;
+        padding: 10px 0;
         font-size: 15px;
         background: #1672F7;
         border: none;
@@ -77,7 +80,7 @@
     /* 사진 */
     #photoBox {
         width: 100%;
-        height: calc(100% - 230px - 160px);
+        height: calc(100% - 240px - 180px);
         border-radius: 18px;
         background: #000;
         overflow: hidden;
@@ -119,7 +122,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 
-<!-- ★ 카카오 지도 JS SDK (네 키 삽입 완료) -->
+<!-- Kakao 지도 SDK -->
 <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa696c041aaaed4c3&libraries=services"></script>
 
 <script>
@@ -137,22 +140,32 @@ document.getElementById("intro").onclick = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        showMain();
-        loadPhoto(file);
-        savePhoto(file);
-        readGPS(file);
+        // 인트로 페이드아웃
+        document.getElementById("intro").style.opacity = 0;
+
+        setTimeout(() => {
+            // 인트로 제거 + 메인 표시
+            document.getElementById("intro").style.display = "none";
+
+            let main = document.getElementById("main");
+            main.style.opacity = 1;
+            main.style.pointerEvents = "auto";
+
+            // 사진 화면 표시
+            loadPhoto(file);
+
+            // 자동 저장 실행
+            savePhoto(file);
+
+            // GPS 읽기 → 지도 띄우기
+            setTimeout(() => {
+                readGPS(file);
+            }, 350);  // 지도 생성 딜레이
+        }, 300);
     };
 
     input.click();
 };
-
-/* 메인 화면 보여주기 */
-function showMain() {
-    document.getElementById("intro").style.display = "none";
-    let main = document.getElementById("main");
-    main.style.opacity = 1;
-    main.style.pointerEvents = "auto";
-}
 
 /* 사진 화면에 표시 */
 function loadPhoto(file) {
@@ -187,7 +200,10 @@ function readGPS(file) {
         const la = convert(lat);
         const lo = convert(lon);
 
+        // 지도 렌더링 실행
         renderMap(la, lo);
+
+        // 주소 변환
         convertAddress(la, lo);
     });
 }
@@ -197,7 +213,7 @@ function convert(c) {
     return c[0] + c[1] / 60 + c[2] / 3600;
 }
 
-/* 지도 표시 */
+/* 지도 렌더링 */
 function renderMap(lat, lon) {
     let container = document.getElementById("map");
 
@@ -211,10 +227,14 @@ function renderMap(lat, lon) {
         position: new kakao.maps.LatLng(lat, lon)
     });
 
-    // 지도 강제 렌더링
+    // 지도 렌더링 보장 (2단계 지연)
     setTimeout(() => {
         map.relayout();
         map.setCenter(new kakao.maps.LatLng(lat, lon));
+        setTimeout(() => {
+            map.relayout();
+            map.setCenter(new kakao.maps.LatLng(lat, lon));
+        }, 200);
     }, 200);
 }
 
