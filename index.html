@@ -15,13 +15,12 @@
         font-family: Pretendard, sans-serif;
     }
 
-    /* 인트로 */
+    /* 인트로 화면 */
     #intro {
         position: absolute;
         width: 100%;
         height: 100%;
         z-index: 10;
-        background: #0C1724;
     }
     #intro img {
         width: 100%;
@@ -33,41 +32,41 @@
     #main {
         width: 100%;
         height: 100%;
+        padding: 10px;
+        box-sizing: border-box;
         opacity: 0;
         pointer-events: none;
-        padding: 12px;
-        box-sizing: border-box;
     }
 
-    /* 지도 — 높이 키움 */
+    /* 지도 */
     #map {
         width: 100%;
-        height: 220px;
+        height: 230px;
         border-radius: 18px;
         background: #444;
         margin-bottom: 10px;
         overflow: hidden;
     }
 
-    /* 주소 — 여백 줄임 */
+    /* 주소 */
     #address {
         background: #fff;
         border-radius: 14px;
-        padding: 14px;
+        padding: 10px 15px;
         font-size: 15px;
         margin-bottom: 10px;
     }
 
-    /* 버튼 — 여백 축소 */
+    /* 버튼 */
     #btnBox {
         display: flex;
-        gap: 6px;
+        gap: 8px;
         margin-bottom: 10px;
     }
     .btn {
         flex: 1;
         padding: 8px 0;
-        font-size: 14px;
+        font-size: 15px;
         background: #1672F7;
         border: none;
         border-radius: 10px;
@@ -75,13 +74,13 @@
         font-weight: 600;
     }
 
-    /* 사진 — 더 크게 */
+    /* 사진 */
     #photoBox {
         width: 100%;
-        height: calc(100% - 220px - 160px);
+        height: calc(100% - 230px - 160px);
         border-radius: 18px;
-        overflow: hidden;
         background: #000;
+        overflow: hidden;
     }
     #photoBox img {
         width: 100%;
@@ -118,14 +117,16 @@
 
 </div>
 
-
 <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
-<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=카카오키&libraries=services"></script>
+
+<!-- ★ 카카오 지도 JS SDK (네 키 삽입 완료) -->
+<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa696c041aaaed4c3&libraries=services"></script>
 
 <script>
+
 let map, geocoder;
 
-/* 인트로 클릭 → 촬영 */
+/* 인트로 클릭 → 카메라 실행 */
 document.getElementById("intro").onclick = () => {
     let input = document.createElement("input");
     input.type = "file";
@@ -138,28 +139,41 @@ document.getElementById("intro").onclick = () => {
 
         showMain();
         loadPhoto(file);
+        savePhoto(file);
         readGPS(file);
     };
 
     input.click();
 };
 
-/* 메인 보이기 */
+/* 메인 화면 보여주기 */
 function showMain() {
     document.getElementById("intro").style.display = "none";
-    const main = document.getElementById("main");
+    let main = document.getElementById("main");
     main.style.opacity = 1;
     main.style.pointerEvents = "auto";
 }
 
-/* 사진 띄우기 */
+/* 사진 화면에 표시 */
 function loadPhoto(file) {
     let reader = new FileReader();
     reader.onload = e => document.getElementById("photo").src = e.target.result;
     reader.readAsDataURL(file);
 }
 
-/* EXIF → GPS */
+/* 사진 자동 저장 */
+function savePhoto(file) {
+    let reader = new FileReader();
+    reader.onload = (e) => {
+        let a = document.createElement("a");
+        a.href = e.target.result;
+        a.download = "photo.jpg";
+        a.click();
+    };
+    reader.readAsDataURL(file);
+}
+
+/* GPS 읽기 */
 function readGPS(file) {
     EXIF.getData(file, function() {
         const lat = EXIF.getTag(this, "GPSLatitude");
@@ -178,11 +192,12 @@ function readGPS(file) {
     });
 }
 
-function convert(coord) {
-    return coord[0] + coord[1]/60 + coord[2]/3600;
+/* 도/분/초 → 소수점 */
+function convert(c) {
+    return c[0] + c[1] / 60 + c[2] / 3600;
 }
 
-/* 지도 */
+/* 지도 표시 */
 function renderMap(lat, lon) {
     let container = document.getElementById("map");
 
@@ -196,17 +211,11 @@ function renderMap(lat, lon) {
         position: new kakao.maps.LatLng(lat, lon)
     });
 
-    /* ★★★ 지도 강제 렌더링 2단계 — 100% 해결 ★★★ */
+    // 지도 강제 렌더링
     setTimeout(() => {
         map.relayout();
         map.setCenter(new kakao.maps.LatLng(lat, lon));
-
-        setTimeout(() => {
-            map.relayout();
-            map.setCenter(new kakao.maps.LatLng(lat, lon));
-        }, 200);
-
-    }, 100);
+    }, 200);
 }
 
 /* 주소 변환 */
@@ -216,13 +225,14 @@ function convertAddress(lat, lon) {
         if (status === kakao.maps.services.Status.OK) {
             document.getElementById("road").innerText =
                 result[0].road_address ? result[0].road_address.address_name : "없음";
+
             document.getElementById("jibun").innerText =
                 result[0].address.address_name;
         }
     });
 }
 
-/* 재촬영 */
+/* 다시 촬영 */
 document.getElementById("retry").onclick = () => location.reload();
 
 /* 주소 복사 */
@@ -231,6 +241,7 @@ document.getElementById("copy").onclick = () => {
     navigator.clipboard.writeText(text);
     alert("주소 복사됨");
 };
+
 </script>
 
 </body>
