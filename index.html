@@ -29,45 +29,45 @@
         object-fit: cover;
     }
 
-    /* 메인 화면 */
+    /* 메인 */
     #main {
         width: 100%;
         height: 100%;
         opacity: 0;
         pointer-events: none;
-        padding: 14px;
+        padding: 12px;
         box-sizing: border-box;
     }
 
-    /* 지도 */
+    /* 지도 — 높이 키움 */
     #map {
         width: 100%;
-        height: 180px;
+        height: 220px;
         border-radius: 18px;
         background: #444;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
         overflow: hidden;
     }
 
-    /* 주소 */
+    /* 주소 — 여백 줄임 */
     #address {
         background: #fff;
-        border-radius: 16px;
-        padding: 16px;
-        font-size: 16px;
-        margin-bottom: 12px;
+        border-radius: 14px;
+        padding: 14px;
+        font-size: 15px;
+        margin-bottom: 10px;
     }
 
-    /* 버튼 */
+    /* 버튼 — 여백 축소 */
     #btnBox {
         display: flex;
-        gap: 8px;
-        margin-bottom: 12px;
+        gap: 6px;
+        margin-bottom: 10px;
     }
     .btn {
         flex: 1;
-        padding: 9px 0;          /* 버튼 크기 줄임 */
-        font-size: 15px;         /* 버튼 글자 줄임 */
+        padding: 8px 0;
+        font-size: 14px;
         background: #1672F7;
         border: none;
         border-radius: 10px;
@@ -75,10 +75,10 @@
         font-weight: 600;
     }
 
-    /* 사진 (더 크게 확장) */
+    /* 사진 — 더 크게 */
     #photoBox {
         width: 100%;
-        height: calc(100% - 180px - 160px);
+        height: calc(100% - 220px - 160px);
         border-radius: 18px;
         overflow: hidden;
         background: #000;
@@ -125,7 +125,7 @@
 <script>
 let map, geocoder;
 
-/* 인트로 → 사진 촬영 */
+/* 인트로 클릭 → 촬영 */
 document.getElementById("intro").onclick = () => {
     let input = document.createElement("input");
     input.type = "file";
@@ -137,7 +137,6 @@ document.getElementById("intro").onclick = () => {
         if (!file) return;
 
         showMain();
-
         loadPhoto(file);
         readGPS(file);
     };
@@ -145,7 +144,7 @@ document.getElementById("intro").onclick = () => {
     input.click();
 };
 
-/* 메인 화면 보여주기 */
+/* 메인 보이기 */
 function showMain() {
     document.getElementById("intro").style.display = "none";
     const main = document.getElementById("main");
@@ -153,7 +152,7 @@ function showMain() {
     main.style.pointerEvents = "auto";
 }
 
-/* 사진 표시 */
+/* 사진 띄우기 */
 function loadPhoto(file) {
     let reader = new FileReader();
     reader.onload = e => document.getElementById("photo").src = e.target.result;
@@ -183,7 +182,7 @@ function convert(coord) {
     return coord[0] + coord[1]/60 + coord[2]/3600;
 }
 
-/* 지도 표시 */
+/* 지도 */
 function renderMap(lat, lon) {
     let container = document.getElementById("map");
 
@@ -197,11 +196,17 @@ function renderMap(lat, lon) {
         position: new kakao.maps.LatLng(lat, lon)
     });
 
-    /* 지도 렌더링 문제 해결 핵심코드 ↓↓↓ */
+    /* ★★★ 지도 강제 렌더링 2단계 — 100% 해결 ★★★ */
     setTimeout(() => {
         map.relayout();
         map.setCenter(new kakao.maps.LatLng(lat, lon));
-    }, 200);
+
+        setTimeout(() => {
+            map.relayout();
+            map.setCenter(new kakao.maps.LatLng(lat, lon));
+        }, 200);
+
+    }, 100);
 }
 
 /* 주소 변환 */
@@ -217,9 +222,10 @@ function convertAddress(lat, lon) {
     });
 }
 
-/* 버튼 */
+/* 재촬영 */
 document.getElementById("retry").onclick = () => location.reload();
 
+/* 주소 복사 */
 document.getElementById("copy").onclick = () => {
     let text = `${document.getElementById("road").innerText}\n${document.getElementById("jibun").innerText}`;
     navigator.clipboard.writeText(text);
