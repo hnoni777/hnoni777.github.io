@@ -9,100 +9,109 @@
 <meta name="theme-color" content="#0C1724" />
 
 <style>
-    body {
+    html, body {
         margin: 0;
         padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden; /* 스크롤 완전 차단 */
+        background-color: #0C1724;
         font-family: 'Pretendard', sans-serif;
-        background-color: #0C1724; /* 하단 배경과 동일하게 설정 */
-        color: white;
     }
 
     /* 인트로 화면 */
     #introScreen {
+        position: absolute;
         width: 100%;
-        height: 100vh;
+        height: 100%;
         background: #0C1724;
         display: flex;
         justify-content: center;
         align-items: center;
+        z-index: 10;
     }
 
+    /* 인트로 이미지 꽉 채우기 */
     #introScreen img {
-        width: 80%;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 
     /* 메인 화면 */
     #mainScreen {
+        width: 100%;
+        height: 100%;
         opacity: 0;
         pointer-events: none;
-        padding: 16px;
+        padding: 12px;
+        box-sizing: border-box;
     }
 
     /* 지도 */
     #map {
         width: 100%;
-        height: 250px;
-        border-radius: 20px;
+        height: 230px;
+        background: #555;
+        border-radius: 18px;
         overflow: hidden;
-        margin-bottom: 16px;
-        background: #eee;
+        margin-bottom: 12px;
     }
 
     /* 주소 박스 */
     #addressBox {
         background: white;
-        padding: 20px;
-        border-radius: 20px;
-        margin-bottom: 16px;
-        color: #000;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 16px;
+        border-radius: 16px;
+        margin-bottom: 12px;
+        color: black;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.15);
     }
 
-    #addressBox span {
-        font-size: 17px;
-        font-weight: 600;
+    #addressBox div {
+        font-size: 16px;
+        line-height: 1.5;
     }
 
-    /* 버튼 영역 */
+    /* 버튼 */
     #buttonBox {
         display: flex;
-        gap: 12px;
-        margin-bottom: 16px;
+        gap: 10px;
+        margin-bottom: 12px;
     }
 
     .btn {
         flex: 1;
         background: #1672F7;
         color: white;
-        padding: 14px 0;
-        border-radius: 12px;
-        font-size: 18px;
+        padding: 11px 0;
+        font-size: 16px;
         border: none;
+        border-radius: 12px;
         font-weight: 600;
     }
 
-    /* 사진 영역 */
+    /* 사진 미리보기 */
     #photoPreview {
         width: 100%;
-        border-radius: 20px;
-        overflow: hidden;
+        height: calc(100% - 230px - 160px);
         background: #000;
-        margin-bottom: 50px;
+        border-radius: 18px;
+        overflow: hidden;
     }
 
     #photoPreview img {
         width: 100%;
-        border-radius: 20px;
-        display: block;
+        height: 100%;
+        object-fit: cover;
     }
 </style>
-
 </head>
 <body>
 
 <!-- 인트로 화면 -->
 <div id="introScreen">
-    <img src="intro.png" alt="인트로" />
+    <img src="intro.png" alt="인트로">
 </div>
 
 <!-- 메인 화면 -->
@@ -111,8 +120,8 @@
     <div id="map"></div>
 
     <div id="addressBox">
-        <div><span>도로명:</span> <span id="road">없음</span></div>
-        <div><span>지번:</span> <span id="jibun">없음</span></div>
+        <div><b>도로명:</b> <span id="road">없음</span></div>
+        <div><b>지번:</b> <span id="jibun">없음</span></div>
     </div>
 
     <div id="buttonBox">
@@ -121,25 +130,24 @@
     </div>
 
     <div id="photoPreview">
-        <img id="previewImage" src="" alt="">
+        <img id="previewImage" src="">
     </div>
 
 </div>
 
-<script src="https://developers.kakao.com/sdk/js/kakao.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=카카오키&libraries=services"></script>
 
 <script>
-    const introScreen = document.getElementById("introScreen");
-    const mainScreen = document.getElementById("mainScreen");
-    const previewImage = document.getElementById("previewImage");
+    const intro = document.getElementById("introScreen");
+    const main = document.getElementById("mainScreen");
+    const preview = document.getElementById("previewImage");
     const road = document.getElementById("road");
     const jibun = document.getElementById("jibun");
-
     let map, geocoder;
 
-    // 인트로 클릭 → 카메라 실행
-    introScreen.addEventListener("click", openCamera);
+    /* ───────── 인트로 터치 → 카메라 실행 ───────── */
+    intro.addEventListener("click", openCamera);
 
     function openCamera() {
         const input = document.createElement("input");
@@ -151,29 +159,29 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            showMainScreen();
+            showMain();
             loadImage(file);
         };
 
         input.click();
     }
 
-    function showMainScreen() {
-        introScreen.style.display = "none";
-        mainScreen.style.opacity = "1";
-        mainScreen.style.pointerEvents = "auto";
+    function showMain() {
+        intro.style.display = "none";
+        main.style.opacity = 1;
+        main.style.pointerEvents = "auto";
     }
 
+    /* ───────── 사진 불러오기 ───────── */
     function loadImage(file) {
         const reader = new FileReader();
-        reader.onload = function (e) {
-            previewImage.src = e.target.result;
-        };
+        reader.onload = e => preview.src = e.target.result;
         reader.readAsDataURL(file);
 
         extractGPS(file);
     }
 
+    /* ───────── GPS 정보 읽기 ───────── */
     function extractGPS(file) {
         const img = new Image();
         img.src = URL.createObjectURL(file);
@@ -191,7 +199,7 @@
             const lonDec = convert(lon);
 
             loadMap(latDec, lonDec);
-            convertToAddress(latDec, lonDec);
+            convertAddress(latDec, lonDec);
         });
     }
 
@@ -199,21 +207,27 @@
         return coord[0] + coord[1] / 60 + coord[2] / 3600;
     }
 
+    /* ───────── 지도 표시 ───────── */
     function loadMap(lat, lon) {
         const container = document.getElementById("map");
         const options = {
             center: new kakao.maps.LatLng(lat, lon),
             level: 3
         };
+
         map = new kakao.maps.Map(container, options);
 
         new kakao.maps.Marker({
-            map: map,
+            map,
             position: new kakao.maps.LatLng(lat, lon)
         });
+
+        // 지도 강제 리렌더링(안 보이는 문제 해결)
+        setTimeout(() => kakao.maps.event.trigger(map, "resize"), 100);
     }
 
-    function convertToAddress(lat, lon) {
+    /* ───────── 주소 변환 ───────── */
+    function convertAddress(lat, lon) {
         geocoder = new kakao.maps.services.Geocoder();
 
         geocoder.coord2Address(lon, lat, function (result, status) {
@@ -227,6 +241,7 @@
         });
     }
 
+    /* ───────── 버튼 기능 ───────── */
     document.getElementById("retryBtn").onclick = () => location.reload();
 
     document.getElementById("copyBtn").onclick = () => {
@@ -234,8 +249,6 @@
         alert("주소가 복사되었습니다!");
     };
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 
 </body>
 </html>
