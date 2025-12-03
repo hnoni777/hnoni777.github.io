@@ -183,7 +183,7 @@ function loadPhoto(file) {
     reader.readAsDataURL(file);
 }
 
-/* 사진 자동 저장 (파일명 매번 다르게)
+/* 사진 자동 저장 (파일명 매번 다르게) */
 function savePhoto(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -195,7 +195,7 @@ function savePhoto(file) {
     };
     reader.readAsDataURL(file);
 }
- */
+ 
 /* EXIF에서 GPS 읽기 */
 function readGPS(file) {
     EXIF.getData(file, function() {
