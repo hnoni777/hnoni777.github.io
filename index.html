@@ -305,8 +305,8 @@ document.getElementById("share").onclick = async () => {
 
         let overlayImg = null;
 
+        // 정적지도 오버레이
         if (_lat && _lon) {
-            // 1) 카카오 Static Map URL (REST API 키 사용)
             const staticURL =
                 "https://dapi.kakao.com/v2/maps/staticmap?" +
                 `center=${_lon},${_lat}` +
@@ -316,15 +316,13 @@ document.getElementById("share").onclick = async () => {
                 "&format=png" +
                 "&appkey=2f1b5620b57ec216ebbd0b701d89dca2";
 
-            // 2) URL → Blob → Base64 (CORS 회피)
-            const blob = await fetch(staticURL).then((r) => r.blob());
-            const base64 = await new Promise((resolve) => {
+            const blob = await fetch(staticURL).then(r => r.blob());
+            const base64 = await new Promise(resolve => {
                 const reader = new FileReader();
                 reader.onloadend = () => resolve(reader.result);
                 reader.readAsDataURL(blob);
             });
 
-            // 3) 지도 위에 정적 이미지 덮어쓰기
             overlayImg = document.createElement("img");
             overlayImg.id = "staticMapOverlay";
             overlayImg.src = base64;
@@ -339,11 +337,36 @@ document.getElementById("share").onclick = async () => {
 
             mapDiv.appendChild(overlayImg);
 
-            await new Promise((res) => {
-                overlayImg.onload = res;
-                overlayImg.onerror = res;
-            });
+            await new Promise(res => overlayImg.onload = res);
         }
+
+        // html2canvas 캡쳐
+        const canvas = await html2canvas(main, { scale: 2, useCORS: true });
+
+        const fileBlob = await new Promise(res =>
+            canvas.toBlob(res, "image/png")
+        );
+        const file = new File([fileBlob], "capture.png", { type: "image/png" });
+
+        // 가장 안정적인 공유 방식
+        if (navigator.share) {
+            await navigator.share({
+                files: [file],
+                title: "대형폐기물 위치",
+                text: "대형폐기물 위치 정보입니다."
+            });
+        } else {
+            alert("이 기기에서는 공유 기능을 지원하지 않습니다.");
+        }
+
+    } catch (err) {
+        console.log(err);
+        alert("공유 중 오류가 발생했습니다. (share 단계)");
+    } finally {
+        const overlay = document.getElementById("staticMapOverlay");
+        if (overlay) overlay.remove();
+    }
+};
 
         // 4) 전체 메인 화면 캡처
         const canvas = await html2canvas(main, {
