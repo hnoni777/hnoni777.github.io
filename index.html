@@ -178,11 +178,29 @@ document.getElementById("intro").onclick = () => {
     input.click();
 };
 /* 사진 화면에 표시 */
+let currentImageBase64 = null;
+
+// 사진 표시할 때 base64 저장
 function loadPhoto(file) {
     const reader = new FileReader();
-    reader.onload = e => document.getElementById("photo").src = e.target.result;
+    reader.onload = e => {
+        currentImageBase64 = e.target.result;
+        document.getElementById("photo").src = currentImageBase64;
+    };
     reader.readAsDataURL(file);
 }
+
+// 사진 저장 버튼
+document.getElementById("savePhotoBtn").onclick = () => {
+    if (!currentImageBase64) {
+        alert("저장할 사진이 없습니다.");
+        return;
+    }
+    const a = document.createElement("a");
+    a.href = currentImageBase64;
+    a.download = `photo_${Date.now()}.jpg`;
+    a.click();
+};
 
 /* 사진 자동 저장 (파일명 매번 다르게) */
 function savePhoto(file) {
@@ -280,9 +298,7 @@ document.getElementById("copy").onclick = () => {
     navigator.clipboard.writeText(text);
     alert("주소가 복사되었습니다.");
 };
-let currentImageBase64 = null;
-function loadPhoto(...) { ... }
-document.getElementById("savePhotoBtn").onclick = (...)
+
 /* service worker 등록 (설치만 가능하게, 강제업데이트 없음) */
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");
