@@ -130,6 +130,7 @@ body {
     <div id="btnBox">
         <button class="btn" id="copy">주소 복사</button>
         <button class="btn" id="retry">다시 촬영</button>
+        <button class="btn" id="savePhotoBtn">사진 저장</button>
     </div>
 
     <div id="photoBox">
@@ -279,7 +280,9 @@ document.getElementById("copy").onclick = () => {
     navigator.clipboard.writeText(text);
     alert("주소가 복사되었습니다.");
 };
-
+let currentImageBase64 = null;
+function loadPhoto(...) { ... }
+document.getElementById("savePhotoBtn").onclick = (...)
 /* service worker 등록 (설치만 가능하게, 강제업데이트 없음) */
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");
