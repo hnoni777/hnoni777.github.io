@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>대형폐기물 위치공유</title>
 
-<!-- PWA용 (이미 쓰고 있으면 그대로 둬도 됨) -->
+<!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0C1724" />
 
@@ -81,7 +81,7 @@
         padding: 10px 0;
         font-size: 15px;
         background: #F2F4F6;   /* 밝은 회색 배경 */
-        color: #0C1724;        /* 진한 남색 글씨 */
+        color: #0C1724;        /* 남색 글씨 */
         border: none;          /* 테두리 없음 */
         border-radius: 12px;
         font-weight: 700;
@@ -90,7 +90,7 @@
     /* 사진 영역 */
     #photoBox {
         width: 100%;
-        height: calc(100% - 230px - 140px); /* 아래 공백 조금 줄이고 사진 키움 */
+        height: calc(100% - 230px - 140px); /* 아래 공백 줄이고 사진 크게 */
         border-radius: 18px;
         background: #000;
         overflow: hidden;
@@ -121,6 +121,7 @@
 
     <div id="btnBox">
         <button class="btn" id="copy">주소 복사</button>
+        <button class="btn" id="share">공유하기</button>
         <button class="btn" id="retry">다시 촬영</button>
     </div>
 
@@ -148,35 +149,35 @@ document.getElementById("intro").onclick = () => {
         document.getElementById("intro").style.opacity = 0;
 
         setTimeout(() => {
-            // 인트로 제거 + 메인 표시
             document.getElementById("intro").style.display = "none";
 
             const main = document.getElementById("main");
             main.style.opacity = 1;
             main.style.pointerEvents = "auto";
 
-            // 사진 화면 표시
+            // 사진 띄우기
             loadPhoto(file);
 
-            // 사진 자동 저장
+            // 자동 저장
             savePhoto(file);
 
-            // GPS 읽고 지도/주소 표시
+            // GPS → 지도/주소
             readGPS(file);
+
         }, 300);
     };
 
     input.click();
 };
 
-/* 사진 화면에 표시 */
+/* 사진 화면 표시 */
 function loadPhoto(file) {
     const reader = new FileReader();
     reader.onload = e => document.getElementById("photo").src = e.target.result;
     reader.readAsDataURL(file);
 }
 
-/* 사진 자동 저장 (파일명 매번 다르게) */
+/* 사진 자동 저장 */
 function savePhoto(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -189,7 +190,7 @@ function savePhoto(file) {
     reader.readAsDataURL(file);
 }
 
-/* EXIF에서 GPS 읽기 */
+/* GPS 읽기 */
 function readGPS(file) {
     EXIF.getData(file, function() {
         const latArr = EXIF.getTag(this, "GPSLatitude");
@@ -205,12 +206,15 @@ function readGPS(file) {
         const lat = dmsToDecimal(latArr, latRef);
         const lon = dmsToDecimal(lonArr, lonRef);
 
+        window._lat = lat;
+        window._lon = lon;
+
         renderMap(lat, lon);
         convertAddress(lat, lon);
     });
 }
 
-/* DMS → 소수 좌표 */
+/* DMS → Decimal */
 function dmsToDecimal(dms, ref) {
     let deg = dms[0];
     let min = dms[1];
@@ -224,8 +228,6 @@ function dmsToDecimal(dms, ref) {
 /* 지도 렌더링 */
 function renderMap(lat, lon) {
     const container = document.getElementById("map");
-
-    // 새로 그릴 때 기존 내용 제거 (안전)
     container.innerHTML = "";
 
     map = new kakao.maps.Map(container, {
@@ -238,14 +240,14 @@ function renderMap(lat, lon) {
         position: new kakao.maps.LatLng(lat, lon)
     });
 
-    // 지도 레이아웃 보정
+    // 보정
     setTimeout(() => {
         map.relayout();
         map.setCenter(new kakao.maps.LatLng(lat, lon));
     }, 200);
 }
 
-/* 좌표 → 주소 */
+/* 주소 변환 */
 function convertAddress(lat, lon) {
     geocoder = new kakao.maps.services.Geocoder();
     geocoder.coord2Address(lon, lat, (result, status) => {
@@ -259,21 +261,49 @@ function convertAddress(lat, lon) {
     });
 }
 
-/* 다시 촬영 → 페이지 새로고침 (상태 꼬임 완전 방지) */
-document.getElementById("retry").onclick = () => {
-    location.reload();
-};
-
 /* 주소 복사 */
 document.getElementById("copy").onclick = () => {
     const road = document.getElementById("road").innerText;
     const jibun = document.getElementById("jibun").innerText;
-    const text = `도로명: ${road}\n지번: ${jibun}`;
-    navigator.clipboard.writeText(text);
+    const txt = `도로명: ${road}\n지번: ${jibun}`;
+    navigator.clipboard.writeText(txt);
     alert("주소가 복사되었습니다.");
 };
 
-/* service worker 등록 (설치만 가능하게, 강제업데이트 없음) */
+/* 공유하기 (사진 + 주소 + 지도 링크 세트) */
+document.getElementById("share").onclick = async () => {
+    const road = document.getElementById("road").innerText;
+    const jibun = document.getElementById("jibun").innerText;
+    const img = document.getElementById("photo").src;
+
+    const mapLink = `https://map.kakao.com/link/map/${window._lat},${window._lon}`;
+
+    const text =
+        `대형폐기물 위치 정보입니다.\n\n도로명: ${road}\n지번: ${jibun}\n\n지도보기:\n${mapLink}`;
+
+    try {
+        const response = await fetch(img);
+        const blob = await response.blob();
+
+        const shareData = {
+            files: [new File([blob], "photo.jpg", { type: "image/jpeg" })],
+            text: text
+        };
+
+        await navigator.share(shareData);
+
+    } catch (err) {
+        alert("공유 기능을 지원하지 않는 기기입니다.");
+        console.log(err);
+    }
+};
+
+/* 다시 촬영 */
+document.getElementById("retry").onclick = () => {
+    location.reload();
+};
+
+/* service worker 등록 */
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");
 }
