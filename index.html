@@ -286,59 +286,50 @@ kakaoShareBtn.onclick = async () => {
     try {
         const target = document.getElementById("main");
 
-        // 1) 화면 스샷 캡처
+        // 1) 스샷 캡처
         const canvas = await html2canvas(target, {
             useCORS: true,
             scale: 1
         });
 
-        // 2) 1080px 리사이즈 (정상 공유를 위한 필수 조건)
-        let MAX_W = 1080;
-        let MAX_H = 1920;
-
+        // 2) 1080px 리사이즈
+        const MAX_W = 1080;
         let w = canvas.width;
         let h = canvas.height;
+        let ratio = MAX_W / w;
 
-        // 가로 제한
-        if (w > MAX_W) {
-            const ratio = MAX_W / w;
-            w = MAX_W;
-            h = h * ratio;
-        }
+        w = MAX_W;
+        h = h * ratio;
 
-        // 세로 제한
-        if (h > MAX_H) {
-            const ratio = MAX_H / h;
-            h = MAX_H;
-            w = w * ratio;
-        }
+        const resized = document.createElement("canvas");
+        resized.width = w;
+        resized.height = h;
+        resized.getContext("2d").drawImage(canvas, 0, 0, w, h);
 
-        const resizedCanvas = document.createElement("canvas");
-        resizedCanvas.width = w;
-        resizedCanvas.height = h;
-        const ctx = resizedCanvas.getContext("2d");
-        ctx.drawImage(canvas, 0, 0, w, h);
-
-        // 3) JPG 변환
-        const jpg = resizedCanvas.toDataURL("image/jpeg", 0.85);
+        const jpg = resized.toDataURL("image/jpeg", 0.90);
         const blob = await (await fetch(jpg)).blob();
-        const filename = "share_" + Date.now() + ".jpg";
-        const file = new File([blob], filename, { type: "image/jpeg" });
 
-        // 4) 실제 파일 다운로드 (갤러리에 저장)
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(file);
-        a.download = filename;
-        a.click();
+        // 3) GitHub Pages에서도 차단되지 않는 실제 저장 (showSaveFilePicker)
+        const handle = await window.showSaveFilePicker({
+            suggestedName: "share.jpg",
+            types: [{
+                description: "JPEG",
+                accept: { "image/jpeg": [".jpg"] }
+            }]
+        });
 
-        alert("이미지가 갤러리에 저장되었습니다.\n카카오톡을 실행합니다.");
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
 
-        // 5) 카카오톡 실행 (갤러리 이미지 선택 화면)
+        alert("이미지가 저장되었습니다.\n이제 카카오톡을 실행합니다!");
+
+        // 4) 카카오톡 실행
         window.location.href = "intent://send#Intent;scheme=kakaotalk;package=com.kakao.talk;end";
 
     } catch (err) {
         console.error(err);
-        alert("카카오톡 공유 중 오류가 발생했습니다.");
+        alert("이미지 저장 또는 카톡 실행 중 오류가 발생했습니다.");
     }
 };
 </script>
