@@ -1,11 +1,18 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0C1724">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>대형폐기물 위치공유</title>
+
+<!-- PWA용 (이미 쓰고 있으면 그대로 둬도 됨) -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0C1724" />
+
+<!-- Kakao Map SDK -->
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa69c041aaaed4c3&libraries=services"></script>
+<!-- EXIF -->
+<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 
 <style>
     html, body {
@@ -14,7 +21,7 @@
         height: 100%;
         overflow: hidden;
         background: #0C1724;
-        font-family: Pretendard, sans-serif;
+        font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     }
 
     /* 인트로 */
@@ -32,7 +39,7 @@
         object-fit: cover;
     }
 
-    /* 메인 */
+    /* 메인 화면 */
     #main {
         width: 100%;
         height: 100%;
@@ -46,44 +53,44 @@
     /* 지도 */
     #map {
         width: 100%;
-        height: 240px;
+        height: 230px;
         border-radius: 18px;
         background: #444;
         margin-bottom: 10px;
         overflow: hidden;
     }
 
-    /* 주소 */
+    /* 주소 박스 */
     #address {
-        background: #fff;
+        background: #ffffff;
         border-radius: 14px;
         padding: 12px 15px;
         font-size: 15px;
         margin-bottom: 10px;
+        color: #000;
     }
 
-    /* 버튼 */
+    /* 버튼 영역 */
     #btnBox {
         display: flex;
         gap: 10px;
         margin-bottom: 10px;
     }
     .btn {
-    flex: 1;
-    padding: 12px 0;
-    font-size: 16px;
-    background: rgba(255,255,255,0.15);
-    color: #ffffff;
-    border: 1.2px solid rgba(255,255,255,0.25);
-    border-radius: 12px;
-    font-weight: 700;
-    backdrop-filter: blur(6px);
-}
+        flex: 1;
+        padding: 10px 0;
+        font-size: 15px;
+        background: #F2F4F6;   /* 밝은 회색 배경 */
+        color: #0C1724;        /* 진한 남색 글씨 */
+        border: none;          /* 테두리 없음 */
+        border-radius: 12px;
+        font-weight: 700;
+    }
 
-    /* 사진 */
+    /* 사진 영역 */
     #photoBox {
         width: 100%;
-        height: calc(100% - 240px - 135px);
+        height: calc(100% - 230px - 140px); /* 아래 공백 조금 줄이고 사진 키움 */
         border-radius: 18px;
         background: #000;
         overflow: hidden;
@@ -99,10 +106,10 @@
 
 <!-- 인트로 -->
 <div id="intro">
-    <img src="intro.png">
+    <img src="intro.png" alt="인트로">
 </div>
 
-<!-- 메인 -->
+<!-- 메인 화면 -->
 <div id="main">
 
     <div id="map"></div>
@@ -118,22 +125,17 @@
     </div>
 
     <div id="photoBox">
-        <img id="photo">
+        <img id="photo" alt="">
     </div>
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
-
-<!-- Kakao 지도 SDK : ★ 키 정확하게 수정됨 -->
-<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa69c041aaaed4c3&libraries=services"></script>
-
 <script>
 let map, geocoder;
 
-/* 인트로 클릭 → 카메라 실행 */
+/* 인트로 클릭 → 카메라 열기 */
 document.getElementById("intro").onclick = () => {
-    let input = document.createElement("input");
+    const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
     input.capture = "environment";
@@ -149,20 +151,18 @@ document.getElementById("intro").onclick = () => {
             // 인트로 제거 + 메인 표시
             document.getElementById("intro").style.display = "none";
 
-            let main = document.getElementById("main");
+            const main = document.getElementById("main");
             main.style.opacity = 1;
             main.style.pointerEvents = "auto";
 
             // 사진 화면 표시
             loadPhoto(file);
 
-            // 자동 저장 실행
+            // 사진 자동 저장
             savePhoto(file);
 
-            // GPS 읽기 → 지도 띄우기
-            setTimeout(() => {
-                readGPS(file);
-            }, 350);  // 지도 생성 딜레이
+            // GPS 읽고 지도/주소 표시
+            readGPS(file);
         }, 300);
     };
 
@@ -171,54 +171,62 @@ document.getElementById("intro").onclick = () => {
 
 /* 사진 화면에 표시 */
 function loadPhoto(file) {
-    let reader = new FileReader();
+    const reader = new FileReader();
     reader.onload = e => document.getElementById("photo").src = e.target.result;
     reader.readAsDataURL(file);
 }
 
 /* 사진 자동 저장 (파일명 매번 다르게) */
 function savePhoto(file) {
-    let reader = new FileReader();
+    const reader = new FileReader();
     reader.onload = (e) => {
-        let a = document.createElement("a");
+        const a = document.createElement("a");
         a.href = e.target.result;
-        const filename = `photo_${Date.now()}.jpg`;   // ← 여기 추가
+        const filename = `photo_${Date.now()}.jpg`;
         a.download = filename;
         a.click();
     };
     reader.readAsDataURL(file);
 }
 
-/* GPS 읽기 */
+/* EXIF에서 GPS 읽기 */
 function readGPS(file) {
     EXIF.getData(file, function() {
-        const lat = EXIF.getTag(this, "GPSLatitude");
-        const lon = EXIF.getTag(this, "GPSLongitude");
+        const latArr = EXIF.getTag(this, "GPSLatitude");
+        const lonArr = EXIF.getTag(this, "GPSLongitude");
+        const latRef = EXIF.getTag(this, "GPSLatitudeRef") || "N";
+        const lonRef = EXIF.getTag(this, "GPSLongitudeRef") || "E";
 
-        if (!lat || !lon) {
-            alert("위치 정보 없음");
+        if (!latArr || !lonArr) {
+            alert("위치 정보가 없는 사진입니다.");
             return;
         }
 
-        const la = convert(lat);
-        const lo = convert(lon);
+        const lat = dmsToDecimal(latArr, latRef);
+        const lon = dmsToDecimal(lonArr, lonRef);
 
-        // 지도 렌더링 실행
-        renderMap(la, lo);
-
-        // 주소 변환
-        convertAddress(la, lo);
+        renderMap(lat, lon);
+        convertAddress(lat, lon);
     });
 }
 
-/* 도/분/초 → 소수점 */
-function convert(c) {
-    return c[0] + c[1] / 60 + c[2] / 3600;
+/* DMS → 소수 좌표 */
+function dmsToDecimal(dms, ref) {
+    let deg = dms[0];
+    let min = dms[1];
+    let sec = dms[2];
+
+    let dec = deg + min/60 + sec/3600;
+    if (ref === "S" || ref === "W") dec = -dec;
+    return dec;
 }
 
 /* 지도 렌더링 */
 function renderMap(lat, lon) {
-    let container = document.getElementById("map");
+    const container = document.getElementById("map");
+
+    // 새로 그릴 때 기존 내용 제거 (안전)
+    container.innerHTML = "";
 
     map = new kakao.maps.Map(container, {
         center: new kakao.maps.LatLng(lat, lon),
@@ -230,18 +238,14 @@ function renderMap(lat, lon) {
         position: new kakao.maps.LatLng(lat, lon)
     });
 
-    // 지도 렌더링 보장 (2단계 지연)
+    // 지도 레이아웃 보정
     setTimeout(() => {
         map.relayout();
         map.setCenter(new kakao.maps.LatLng(lat, lon));
-        setTimeout(() => {
-            map.relayout();
-            map.setCenter(new kakao.maps.LatLng(lat, lon));
-        }, 200);
     }, 200);
 }
 
-/* 주소 변환 */
+/* 좌표 → 주소 */
 function convertAddress(lat, lon) {
     geocoder = new kakao.maps.services.Geocoder();
     geocoder.coord2Address(lon, lat, (result, status) => {
@@ -255,20 +259,25 @@ function convertAddress(lat, lon) {
     });
 }
 
-/* 다시 촬영 */
-document.getElementById("retry").onclick = () => location.reload();
+/* 다시 촬영 → 페이지 새로고침 (상태 꼬임 완전 방지) */
+document.getElementById("retry").onclick = () => {
+    location.reload();
+};
 
 /* 주소 복사 */
 document.getElementById("copy").onclick = () => {
-    let text = `${document.getElementById("road").innerText}\n${document.getElementById("jibun").innerText}`;
+    const road = document.getElementById("road").innerText;
+    const jibun = document.getElementById("jibun").innerText;
+    const text = `도로명: ${road}\n지번: ${jibun}`;
     navigator.clipboard.writeText(text);
-    alert("주소 복사됨");
+    alert("주소가 복사되었습니다.");
 };
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js');
+
+/* service worker 등록 (설치만 가능하게, 강제업데이트 없음) */
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js");
 }
 </script>
+
 </body>
 </html>
