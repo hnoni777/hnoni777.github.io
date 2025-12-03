@@ -278,43 +278,45 @@ document.getElementById("copy").onclick = () => {
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");
 }
-document.getElementById("kakaoShareBtn").onclick = async () => {
+kakaoShareBtn.onclick = async () => {
     try {
         const target = document.getElementById("main");
 
-        // 화면 캡처
+        // 1) html2canvas로 화면 캡처
         const canvas = await html2canvas(target, {
             useCORS: true,
             scale: 1
         });
 
-        // 1080px로 리사이즈
+        // 2) 1080px로 리사이즈
         const resized = document.createElement("canvas");
         const ctx = resized.getContext("2d");
+
         const maxW = 1080;
         const scale = maxW / canvas.width;
 
         resized.width = maxW;
         resized.height = canvas.height * scale;
+
         ctx.drawImage(canvas, 0, 0, resized.width, resized.height);
 
-        // JPG 변환
-        const jpg = resized.toDataURL("image/jpeg", 0.85);
-        const blob = await (await fetch(jpg)).blob();
+        // 3) JPG 변환
+        const jpgURL = resized.toDataURL("image/jpeg", 0.85);
+        const blob = await (await fetch(jpgURL)).blob();
         const file = new File([blob], "share.jpg", { type: "image/jpeg" });
 
-        // 공유
+        // 4) 크롬 공유 API 실행
         await navigator.share({
             files: [file],
-            title: "대형폐기물 위치 공유",
+            title: "대형폐기물 위치",
             text: `${road.innerText}\n${jibun.innerText}`
         });
 
     } catch (err) {
-        alert("카톡 공유 중 오류가 발생했습니다.");
         console.error(err);
+        alert("카카오톡 공유 중 오류가 발생했습니다.");
     }
-};    
+};
 </script>
 
 </body>
