@@ -9,9 +9,6 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0C1724" />
 
-<!-- Kakao Map SDK -->
-<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa69c041aaaed4c3&libraries=services"></script>
-
 <!-- EXIF -->
 <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 
@@ -54,7 +51,7 @@
         transition: opacity 0.3s;
     }
 
-    /* 지도 */
+    /* 지도 영역 (Static Map 이미지) */
     #map {
         width: 100%;
         height: 230px;
@@ -62,6 +59,12 @@
         background: #444;
         margin-bottom: 10px;
         overflow: hidden;
+    }
+    #map img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
     }
 
     /* 주소 */
@@ -91,7 +94,7 @@
         font-weight: 700;
     }
 
-    /* 사진 */
+    /* 사진 영역 */
     #photoBox {
         width: 100%;
         height: calc(100% - 230px - 140px);
@@ -116,19 +119,25 @@
 <!-- 메인 화면 -->
 <div id="main">
 
-    <div id="map"></div>
+    <!-- Static Map 박스 -->
+    <div id="map">
+        <img id="mapImg" src="" alt="지도">
+    </div>
 
+    <!-- 주소 -->
     <div id="address">
         <b>도로명:</b> <span id="road">없음</span><br>
         <b>지번:</b> <span id="jibun">없음</span>
     </div>
 
+    <!-- 버튼 -->
     <div id="btnBox">
         <button class="btn" id="copy">주소 복사</button>
         <button class="btn" id="share">카톡 공유</button>
         <button class="btn" id="retry">다시 촬영</button>
     </div>
 
+    <!-- 사진 -->
     <div id="photoBox">
         <img id="photo" alt="">
     </div>
@@ -136,9 +145,7 @@
 </div>
 
 <script>
-let map, geocoder;
-
-/* 인트로 클릭 → 촬영 */
+/* 인트로 클릭 → 촬영 시작 */
 document.getElementById("intro").onclick = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -149,11 +156,13 @@ document.getElementById("intro").onclick = () => {
         const file = e.target.files[0];
         if (!file) return;
 
+        // 인트로 숨기기
         document.getElementById("intro").style.opacity = 0;
 
         setTimeout(() => {
             document.getElementById("intro").style.display = "none";
 
+            // 메인 화면 활성화
             const main = document.getElementById("main");
             main.style.opacity = 1;
             main.style.pointerEvents = "auto";
@@ -168,14 +177,14 @@ document.getElementById("intro").onclick = () => {
     input.click();
 };
 
-/* 사진 화면 표시 */
+/* 사진 표시 */
 function loadPhoto(file) {
     const reader = new FileReader();
     reader.onload = e => document.getElementById("photo").src = e.target.result;
     reader.readAsDataURL(file);
 }
 
-/* 사진 저장 */
+/* 촬영한 사진 자동 저장 */
 function savePhoto(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -188,7 +197,7 @@ function savePhoto(file) {
     reader.readAsDataURL(file);
 }
 
-/* GPS 읽기 */
+/* EXIF GPS 읽기 */
 function readGPS(file) {
     EXIF.getData(file, function() {
         const latArr = EXIF.getTag(this, "GPSLatitude");
@@ -207,7 +216,7 @@ function readGPS(file) {
         window._lat = lat;
         window._lon = lon;
 
-        renderMap(lat, lon);
+        loadStaticMap(lat, lon);
         convertAddress(lat, lon);
     });
 }
@@ -223,37 +232,30 @@ function dmsToDecimal(dms, ref) {
     return dec;
 }
 
-/* 지도 표시 */
-function renderMap(lat, lon) {
-    const container = document.getElementById("map");
-    container.innerHTML = "";
+/* 정적 지도 이미지 출력 */
+function loadStaticMap(lat, lon) {
+    const img = document.getElementById("mapImg");
 
-    map = new kakao.maps.Map(container, {
-        center: new kakao.maps.LatLng(lat, lon),
-        level: 3
-    });
-
-    new kakao.maps.Marker({
-        map,
-        position: new kakao.maps.LatLng(lat, lon)
-    });
-
-    setTimeout(() => {
-        map.relayout();
-        map.setCenter(new kakao.maps.LatLng(lat, lon));
-    }, 200);
+    // 카카오맵 썸네일 Static 이미지
+    img.src = `https://map.kakao.com/map-thumbnail/${lat},${lon}/600x300.png`;
 }
 
-/* 주소 변환 */
+/* 주소 변환 (도로명/지번) */
 function convertAddress(lat, lon) {
-    geocoder = new kakao.maps.services.Geocoder();
-    geocoder.coord2Address(lon, lat, (result, status) => {
-        if (status === kakao.maps.services.Status.OK) {
+    fetch(`https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lon}&y=${lat}`, {
+        headers: {
+            Authorization: "KakaoAK 2f1b5620b57ec216ebbd0b701d89dca2"  /* REST API 키 */
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.documents.length > 0) {
+            const doc = data.documents[0];
             document.getElementById("road").innerText =
-                result[0].road_address ? result[0].road_address.address_name : "없음";
+                doc.road_address ? doc.road_address.address_name : "없음";
 
             document.getElementById("jibun").innerText =
-                result[0].address.address_name;
+                doc.address.address_name;
         }
     });
 }
@@ -262,16 +264,16 @@ function convertAddress(lat, lon) {
 document.getElementById("copy").onclick = () => {
     const road = document.getElementById("road").innerText;
     const jibun = document.getElementById("jibun").innerText;
+
     navigator.clipboard.writeText(`도로명: ${road}\n지번: ${jibun}`);
     alert("주소가 복사되었습니다.");
 };
 
-/* ★★★ 카톡 공유: 화면 전체 캡처 후 공유 ★★★ */
+/* 📸 카톡 공유: 화면 전체 캡처 */
 document.getElementById("share").onclick = async () => {
     try {
         const main = document.getElementById("main");
 
-        // 화면 캡처
         const canvas = await html2canvas(main, { scale: 2 });
         const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
 
@@ -279,8 +281,7 @@ document.getElementById("share").onclick = async () => {
 
         await navigator.share({
             files: [file],
-            title: "대형폐기물 위치",
-            text: ""
+            title: "대형폐기물 위치"
         });
 
     } catch (err) {
@@ -294,7 +295,7 @@ document.getElementById("retry").onclick = () => {
     location.reload();
 };
 
-/* service worker 등록 */
+/* service worker */
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");
 }
