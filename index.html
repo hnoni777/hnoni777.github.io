@@ -122,7 +122,6 @@
     <div id="btnBox">
         <button class="btn" id="copy">주소 복사</button>
         <button class="btn" id="retry">다시 촬영</button>
-        <button class="btn" id="kakaoShareBtn">카톡 공유</button>
     </div>
 
     <div id="photoBox">
@@ -278,54 +277,6 @@ document.getElementById("copy").onclick = () => {
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");
 }
-/* --------------------------------------------------
-    카톡 공유 (A 방식)
-    - 스샷 JPG 저장 → 카카오톡 실행 → 갤러리에서 선택
--------------------------------------------------- */
-kakaoShareBtn.onclick = async () => {
-    try {
-        const target = document.getElementById("main");
-
-        // 1) 스샷 캡처
-        const canvas = await html2canvas(target, {
-            useCORS: true,
-            scale: 1
-        });
-
-        // 2) 1080px 리사이즈
-        const MAX_W = 1080;
-        let w = canvas.width;
-        let h = canvas.height;
-        let ratio = MAX_W / w;
-
-        w = MAX_W;
-        h = h * ratio;
-
-        const resized = document.createElement("canvas");
-        resized.width = w;
-        resized.height = h;
-        resized.getContext("2d").drawImage(canvas, 0, 0, w, h);
-
-        const jpgData = resized.toDataURL("image/jpeg", 0.9);
-        const blob = await (await fetch(jpgData)).blob();
-
-        // 3) 파일 객체 생성 (카톡 공유용)
-        const file = new File([blob], "share.jpg", {
-            type: "image/jpeg"
-        });
-
-        // 4) Web Share API (img + text 공유)
-        await navigator.share({
-            files: [file],
-            title: "대형폐기물 위치",
-            text: `${roadAddress}\n${jibunAddress}`
-        });
-
-    } catch (err) {
-        console.error(err);
-        alert("카톡 공유 중 오류가 발생했습니다.");
-    }
-};
 </script>
 
 </body>
