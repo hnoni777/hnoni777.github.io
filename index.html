@@ -305,13 +305,12 @@ document.getElementById("share").onclick = async () => {
 
         let overlayImg = null;
 
-        // 정적지도 오버레이
+        // 정적 지도 오버레이
         if (_lat && _lon) {
             const staticURL =
                 "https://dapi.kakao.com/v2/maps/staticmap?" +
                 `center=${_lon},${_lat}` +
-                "&level=3" +
-                "&w=800&h=400" +
+                "&level=3&w=800&h=400" +
                 `&markers=${_lon},${_lat}` +
                 "&format=png" +
                 "&appkey=2f1b5620b57ec216ebbd0b701d89dca2";
@@ -333,40 +332,45 @@ document.getElementById("share").onclick = async () => {
             overlayImg.style.height = "100%";
             overlayImg.style.objectFit = "cover";
             overlayImg.style.borderRadius = "18px";
-            overlayImg.style.zIndex = "10";
-
+            overlayImg.style.zIndex = "20";
             mapDiv.appendChild(overlayImg);
 
+            // 로딩 보장
             await new Promise(res => overlayImg.onload = res);
         }
 
-        // html2canvas 캡쳐
+        // ★ JPG로 캡처 (PNG 공유는 오류 발생 확률 높음)
         const canvas = await html2canvas(main, { scale: 2, useCORS: true });
 
-        const fileBlob = await new Promise(res =>
-            canvas.toBlob(res, "image/png")
+        const jpegBlob = await new Promise(res => 
+            canvas.toBlob(res, "image/jpeg", 0.9)  // JPG + 고품질
         );
-        const file = new File([fileBlob], "capture.png", { type: "image/png" });
 
-        // 가장 안정적인 공유 방식
+        const file = new File(
+            [jpegBlob],
+            `capture_${Date.now()}.jpg`,
+            { type: "image/jpeg" }
+        );
+
+        // ★ navigator.share 단독 사용 — 가장 안정적
         if (navigator.share) {
             await navigator.share({
                 files: [file],
-                title: "대형폐기물 위치",
-                text: "대형폐기물 위치 정보입니다."
+                title: "대형폐기물 위치 공유"
             });
         } else {
-            alert("이 기기에서는 공유 기능을 지원하지 않습니다.");
+            alert("기기에서 공유 기능을 지원하지 않습니다.");
         }
 
     } catch (err) {
-        console.log(err);
-        alert("공유 중 오류가 발생했습니다. (share 단계)");
+        console.log("공유 오류:", err);
+        alert("공유 중 오류가 발생했습니다.");
     } finally {
+        // 정적 지도 오버레이 제거 → 다시 실시간 지도만 보이게
         const overlay = document.getElementById("staticMapOverlay");
         if (overlay) overlay.remove();
     }
-}  
+};
 </script>
 
 </body>
