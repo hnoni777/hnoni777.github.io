@@ -366,41 +366,7 @@ document.getElementById("share").onclick = async () => {
         const overlay = document.getElementById("staticMapOverlay");
         if (overlay) overlay.remove();
     }
-};
-
-        // 4) 전체 메인 화면 캡처
-        const canvas = await html2canvas(main, {
-            scale: 2,
-            useCORS: true
-        });
-
-        const fileBlob = await new Promise((res) =>
-            canvas.toBlob(res, "image/png")
-        );
-        const file = new File([fileBlob], "capture.png", { type: "image/png" });
-
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                files: [file],
-                title: "대형폐기물 위치"
-            });
-        } else {
-            alert("공유를 지원하지 않는 환경입니다.");
-        }
-    } catch (e) {
-        alert("공유 중 오류가 발생했습니다.");
-        console.log(e);
-    } finally {
-        // 5) 정적 지도 오버레이 제거 → 다시 실시간 지도만 남음
-        const overlay = document.getElementById("staticMapOverlay");
-        if (overlay) overlay.remove();
-    }
-};
-
-/* service worker 등록 (이미 파일 있으면 그대로 사용) */
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js").catch(() => {});
-}
+}  
 </script>
 
 </body>
