@@ -306,30 +306,24 @@ kakaoShareBtn.onclick = async () => {
         resized.height = h;
         resized.getContext("2d").drawImage(canvas, 0, 0, w, h);
 
-        const jpg = resized.toDataURL("image/jpeg", 0.90);
-        const blob = await (await fetch(jpg)).blob();
+        const jpgData = resized.toDataURL("image/jpeg", 0.9);
+        const blob = await (await fetch(jpgData)).blob();
 
-        // 3) GitHub Pages에서도 차단되지 않는 실제 저장 (showSaveFilePicker)
-        const handle = await window.showSaveFilePicker({
-            suggestedName: "share.jpg",
-            types: [{
-                description: "JPEG",
-                accept: { "image/jpeg": [".jpg"] }
-            }]
+        // 3) 파일 객체 생성 (카톡 공유용)
+        const file = new File([blob], "share.jpg", {
+            type: "image/jpeg"
         });
 
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-
-        alert("이미지가 저장되었습니다.\n이제 카카오톡을 실행합니다!");
-
-        // 4) 카카오톡 실행
-        window.location.href = "intent://send#Intent;scheme=kakaotalk;package=com.kakao.talk;end";
+        // 4) Web Share API (img + text 공유)
+        await navigator.share({
+            files: [file],
+            title: "대형폐기물 위치",
+            text: `${roadAddress}\n${jibunAddress}`
+        });
 
     } catch (err) {
         console.error(err);
-        alert("이미지 저장 또는 카톡 실행 중 오류가 발생했습니다.");
+        alert("카톡 공유 중 오류가 발생했습니다.");
     }
 };
 </script>
