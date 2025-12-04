@@ -304,6 +304,44 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js");
 }
 </script>
+<!-- PWA 위치 권한 자동 요청 -->
+<script>
+// ⭐ PWA 감지
+const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
 
+// ⭐ 위치 권한 자동 요청 함수
+async function requestGeoPermission() {
+    if (!navigator.permissions) return;
+
+    try {
+        const perm = await navigator.permissions.query({ name: "geolocation" });
+
+        // 1) 권한 차단됨 → 안내 필요
+        if (perm.state === "denied") {
+            alert("⚠️ 위치 권한이 차단되어 있습니다.\n\n설정 → 앱 → 대형폐기물 위치공유 → 권한 → 위치 → 허용 으로 변경해주세요!");
+            return;
+        }
+
+        // 2) 권한 미정(prompt) → 자동 요청
+        if (perm.state === "prompt") {
+            navigator.geolocation.getCurrentPosition(
+                () => console.log("위치 권한 허용됨"),
+                () => console.warn("권한 요청 실패(사용자 취소)")
+            );
+        }
+
+        // 3) 권한 허용됨 → 아무것도 안 함
+    } catch (e) {
+        console.error("권한 체크 오류:", e);
+    }
+}
+
+// ⭐ 앱(PWA) 설치 모드일 때 자동 실행
+if (isPWA) {
+    setTimeout(() => {
+        requestGeoPermission();
+    }, 500);  // 앱 실행 후 0.5초 뒤 자동 요청
+}
+</script>
 </body>
 </html>
