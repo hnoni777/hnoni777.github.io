@@ -1,23 +1,31 @@
 {
   "name": "대형폐기물 위치공유",
-  "short_name": "대형폐기물 위치공유",
-  "description": "대형폐기물 사진 촬영 후 주소 자동 표시 앱",
-  "start_url": "https://hnoni777.github.io/index.html",
-  "scope": "https://hnoni777.github.io/"
+  "short_name": "폐기물 위치",
+  "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#3B82F6",
+  "theme_color": "#ffffff",
+  "orientation": "portrait-primary",
+
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icon-512.png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+
+  "id": "hnoni777.gihub.io.app"
+  "screenshots": [
+  {
+    "src": "/screenshots/intro.png",
+    "sizes": "720x1280",
+    "type": "image/png"
+  }
   ]
 }
