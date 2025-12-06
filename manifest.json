@@ -1,6 +1,6 @@
 {
   "name": "대형폐기물 위치공유",
-  "short_name": "폐기물 위치",
+  "short_name": "위치공유",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -9,12 +9,12 @@
 
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
@@ -23,7 +23,7 @@
   "id": "hnoni777.gihub.io.app"
   "screenshots": [
   {
-    "src": "/screenshots/intro.png",
+    "src": "intro.png",
     "sizes": "720x1280",
     "type": "image/png"
   }
