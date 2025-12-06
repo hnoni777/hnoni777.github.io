@@ -1,6 +1,7 @@
 {
   "name": "대형폐기물 위치공유",
   "short_name": "위치공유",
+  "description": "대형폐기물 사진 촬영 후 주소를 자동으로 표시해주는 앱",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -20,12 +21,13 @@
     }
   ],
 
-  "id": "hnoni777.github.io.app"
+ "id": "https://hnoni777.github.io",
+
   "screenshots": [
-  {
-    "src": "intro.png",
-    "sizes": "720x1280",
-    "type": "image/png"
-  }
+    {
+      "src": "/intro.png",
+      "sizes": "720x1280",
+      "type": "image/png"
+    }
   ]
 }
