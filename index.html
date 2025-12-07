@@ -189,11 +189,17 @@ document.getElementById("intro").onclick = () => {
 let currentImageBase64 = null;
 
 // 사진 표시할 때 base64 저장
-function loadPhoto(file) {
+function loadPhoto(file, callback) {
     const reader = new FileReader();
     reader.onload = e => {
         currentImageBase64 = e.target.result;
-        document.getElementById("photo").src = currentImageBase64;
+        const img = document.getElementById("photo");
+        
+        img.onload = () => {
+            if (callback) callback();   // 아이폰에서 image load 된 후 GPS 읽기
+        };
+
+        img.src = currentImageBase64;
     };
     reader.readAsDataURL(file);
 }
@@ -232,29 +238,35 @@ function readGPS(file) {
         const lonRef = EXIF.getTag(this, "GPSLongitudeRef") || "E";
 
         // 📌 EXIF GPS 없음 → 조용히 실시간 GPS 사용
-        if (!latArr || !lonArr) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const clat = pos.coords.latitude;
-                    const clon = pos.coords.longitude;
+        
+if (!latArr || !lonArr) {
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const clat = pos.coords.latitude;
+            const clon = pos.coords.longitude;
 
-                    renderMap(clat, clon);
-                    convertAddress(clat, clon);
-                },
-                (err) => {
-                    console.warn("실시간 GPS 실패:", err);
-                }
-            );
-            return;
+            renderMap(clat, clon);
+
+            // ⬇⬇⬇ 여기
+            setTimeout(() => {
+                convertAddress(clat, clon);
+            }, 300);
+        },
+        (err) => {
+            console.warn("실시간 GPS 실패:", err);
         }
-
+    );
+    return;
+}
         // 📌 EXIF GPS 있음 → 그대로 사용
         const lat = dmsToDecimal(latArr, latRef);
         const lon = dmsToDecimal(lonArr, lonRef);
 
         renderMap(lat, lon);
+        setTimeout(() => {
         convertAddress(lat, lon);
-    });
+        }, 300);
+      
 }
 
 /* DMS → 소수 좌표 */
@@ -272,25 +284,26 @@ function dmsToDecimal(dms, ref) {
 function renderMap(lat, lon) {
     const container = document.getElementById("map");
 
-    // 새로 그릴 때 기존 내용 제거 (안전)
-    container.innerHTML = "";
+    // iPhone에서 layout 안정화
+    requestAnimationFrame(() => {
+        map = new kakao.maps.Map(container, {
+            center: new kakao.maps.LatLng(lat, lon),
+            level: 3
+        });
 
-    map = new kakao.maps.Map(container, {
-        center: new kakao.maps.LatLng(lat, lon),
-        level: 3
+        new kakao.maps.Marker({
+            map,
+            position: new kakao.maps.LatLng(lat, lon)
+        });
+
+        // 지도 크기 보정
+        setTimeout(() => {
+            map.relayout();
+            map.setCenter(new kakao.maps.LatLng(lat, lon));
+        }, 100);
     });
-
-    new kakao.maps.Marker({
-        map,
-        position: new kakao.maps.LatLng(lat, lon)
-    });
-
-    // 지도 레이아웃 보정
-    setTimeout(() => {
-        map.relayout();
-        map.setCenter(new kakao.maps.LatLng(lat, lon));
-    }, 200);
 }
+
 
 /* 좌표 → 주소 */
 function convertAddress(lat, lon) {
