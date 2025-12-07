@@ -22,12 +22,4 @@
   ],
 
  "id": "/?source=pwa",
-
-  "screenshots": [
-    {
-      "src": "/intro.png",
-      "sizes": "1024x1536",
-      "type": "image/png"
-    }
-  ]
 }
