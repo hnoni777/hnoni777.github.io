@@ -237,37 +237,38 @@ function readGPS(file) {
         const latRef = EXIF.getTag(this, "GPSLatitudeRef") || "N";
         const lonRef = EXIF.getTag(this, "GPSLongitudeRef") || "E";
 
-        // 📌 EXIF GPS 없음 → 조용히 실시간 GPS 사용
-        
-if (!latArr || !lonArr) {
-    navigator.geolocation.getCurrentPosition(
-        (pos) => {
-            const clat = pos.coords.latitude;
-            const clon = pos.coords.longitude;
+        // 📌 EXIF GPS 없음 → 실시간 GPS
+        if (!latArr || !lonArr) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const clat = pos.coords.latitude;
+                    const clon = pos.coords.longitude;
 
-            renderMap(clat, clon);
+                    renderMap(clat, clon);
 
-            // ⬇⬇⬇ 여기
-            setTimeout(() => {
-                convertAddress(clat, clon);
-            }, 300);
-        });
-        (err) => {
-            console.warn("실시간 GPS 실패:", err);
+                    setTimeout(() => {
+                        convertAddress(clat, clon);
+                    }, 300);
+                },
+                (err) => {
+                    console.warn("실시간 GPS 실패:", err);
+                }
+            );
+            return;
         }
-    );
-    return;
-}
-        // 📌 EXIF GPS 있음 → 그대로 사용
+
+        // 📌 EXIF GPS 있음
         const lat = dmsToDecimal(latArr, latRef);
         const lon = dmsToDecimal(lonArr, lonRef);
 
         renderMap(lat, lon);
+
         setTimeout(() => {
-        convertAddress(lat, lon);
+            convertAddress(lat, lon);
         }, 300);
-      
-}
+
+    }); // ← EXIF.getData 닫기
+}       // ← readGPS 닫기
 
 /* DMS → 소수 좌표 */
 function dmsToDecimal(dms, ref) {
