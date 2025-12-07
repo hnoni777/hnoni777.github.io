@@ -9,125 +9,93 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>대형폐기물 위치공유</title>
 
-<!-- PWA용 (이미 쓰고 있으면 그대로 둬도 됨) -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0C1724" />
 
 <!-- Kakao Map SDK -->
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa69c041aaaed4c3&libraries=services"></script>
+
 <!-- EXIF -->
 <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
 
 <style>
-body {
-  background-color: #000000;
-  font-family: 'Pretendard', sans-serif;
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #0B1220;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
-    html, body {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        overflow: hidden;
-        background: #0B1220;
-        font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    }
 
-    /* 인트로 */
-    #intro {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 20;
-        transition: opacity 0.3s;
-    }
-    #intro img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
+#intro {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 20;
+    transition: opacity 0.3s;
+}
+#intro img {
+    width: 100%; height: 100%; object-fit: cover;
+}
 
-    /* 메인 화면 */
-    #main {
-        width: 100%;
-        height: 100%;
-        padding: 12px;
-        box-sizing: border-box;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s;
-    }
+#main {
+    width: 100%; height: 100%;
+    padding: 12px; box-sizing: border-box;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+}
 
-    /* 지도 */
-    #map {
-        width: 100%;
-        height: 280px;
-        border-radius: 18px;
-        background: #444;
-        margin-bottom: 10px;
-        overflow: hidden;
-    }
+#map {
+    width: 100%; height: 280px;
+    border-radius: 18px;
+    background: #444;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
 
-    /* 주소 박스 */
-    #address {
-        background: #E6F0EA;
-        border-radius: 14px;
-        padding: 12px 15px;
-        font-size: 15px;
-        margin-bottom: 10px;
-        color: #173025;
-    }
+#address {
+    background: #E6F0EA;
+    border-radius: 14px;
+    padding: 12px 15px;
+    font-size: 15px;
+    margin-bottom: 10px;
+    color: #173025;
+}
 
-    /* 버튼 영역 */
-    #btnBox {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 10px;
-    }
-    .btn {
-        flex: 1;
-        padding: 7px 0;
-        font-size: 13px;
-        background: #5c697b;   /* 밝은 회색 배경 */
-        color: #ffffff;        /* 진한 남색 글씨 */
-        border: none;          /* 테두리 없음 */
-        border-radius: 10px;
-        font-weight: 700;
-    }
+#btnBox {
+    display: flex; gap: 10px; margin-bottom: 10px;
+}
+.btn {
+    flex: 1; padding: 7px 0;
+    font-size: 13px;
+    background: #5c697b;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+}
 
-    /* 사진 영역 */
-    #photoBox {
-        width: 100%;
-        height: calc(100% - 280px - 120px); /* 아래 공백 조금 줄이고 사진 키움 */
-        border-radius: 18px;
-        background: #E6F0EA;
-        overflow: hidden;
-    }
-    #photoBox img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
+#photoBox {
+    width: 100%;
+    height: calc(100% - 280px - 120px);
+    border-radius: 18px;
+    background: #E6F0EA;
+    overflow: hidden;
+}
+#photoBox img {
+    width: 100%; height: 100%; object-fit: cover;
+}
 </style>
-<script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker
-      .register("service-worker.js")
-      .then(() => console.log("Service Worker Registered"))
-      .catch((err) => console.log("Service Worker Registration Failed:", err));
-  }
-</script>
 </head>
+
 <body>
 
-<!-- 인트로 -->
 <div id="intro">
     <img src="intro.png" alt="인트로">
 </div>
 
-<!-- 메인 화면 -->
 <div id="main">
-
     <div id="map"></div>
 
     <div id="address">
@@ -144,13 +112,13 @@ body {
     <div id="photoBox">
         <img id="photo" alt="">
     </div>
-
 </div>
 
 <script>
 let map, geocoder;
+let currentImageBase64 = null;
 
-/* 인트로 클릭 → 카메라 열기 */
+/* 인트로 클릭 → 카메라 실행 */
 document.getElementById("intro").onclick = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -161,75 +129,38 @@ document.getElementById("intro").onclick = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // 인트로 페이드아웃
         document.getElementById("intro").style.opacity = 0;
 
         setTimeout(() => {
-            // 인트로 제거 + 메인 표시
             document.getElementById("intro").style.display = "none";
 
             const main = document.getElementById("main");
             main.style.opacity = 1;
             main.style.pointerEvents = "auto";
 
-            // 사진 화면 표시
-            loadPhoto(file);
-
-            // 사진 자동 저장
-            /*savePhoto(file); */
-
-            // GPS 읽고 지도/주소 표시
-            readGPS(file);
+            loadPhoto(file, () => {
+                readGPS(file);
+            });
         }, 300);
     };
 
     input.click();
 };
-/* 사진 화면에 표시 */
-let currentImageBase64 = null;
 
-// 사진 표시할 때 base64 저장
+/* 사진 표시 */
 function loadPhoto(file, callback) {
     const reader = new FileReader();
     reader.onload = e => {
         currentImageBase64 = e.target.result;
         const img = document.getElementById("photo");
-        
-        img.onload = () => {
-            if (callback) callback();   // 아이폰에서 image load 된 후 GPS 읽기
-        };
 
+        img.onload = () => { if (callback) callback(); };
         img.src = currentImageBase64;
     };
     reader.readAsDataURL(file);
 }
 
-// 사진 저장 버튼
-document.getElementById("savePhotoBtn").onclick = () => {
-    if (!currentImageBase64) {
-        alert("저장할 사진이 없습니다.");
-        return;
-    }
-    const a = document.createElement("a");
-    a.href = currentImageBase64;
-    a.download = `photo_${Date.now()}.jpg`;
-    a.click();
-};
-
-/* 사진 자동 저장 (파일명 매번 다르게) */
-function savePhoto(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const a = document.createElement("a");
-        a.href = e.target.result;
-        const filename = `photo_${Date.now()}.jpg`;
-        a.download = filename;
-        a.click();
-    };
-    reader.readAsDataURL(file);
-}
- 
-/* EXIF에서 GPS 읽기 */
+/* EXIF + GPS 처리 */
 function readGPS(file) {
     EXIF.getData(file, function() {
         const latArr = EXIF.getTag(this, "GPSLatitude");
@@ -237,7 +168,6 @@ function readGPS(file) {
         const latRef = EXIF.getTag(this, "GPSLatitudeRef") || "N";
         const lonRef = EXIF.getTag(this, "GPSLongitudeRef") || "E";
 
-        // 📌 EXIF GPS 없음 → 실시간 GPS
         if (!latArr || !lonArr) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
@@ -245,47 +175,33 @@ function readGPS(file) {
                     const clon = pos.coords.longitude;
 
                     renderMap(clat, clon);
-
-                    setTimeout(() => {
-                        convertAddress(clat, clon);
-                    }, 300);
+                    setTimeout(() => convertAddress(clat, clon), 300);
                 },
-                (err) => {
-                    console.warn("실시간 GPS 실패:", err);
-                }
+                (err) => { console.warn("실시간 GPS 실패:", err); }
             );
             return;
         }
 
-        // 📌 EXIF GPS 있음
         const lat = dmsToDecimal(latArr, latRef);
         const lon = dmsToDecimal(lonArr, lonRef);
 
         renderMap(lat, lon);
+        setTimeout(() => convertAddress(lat, lon), 300);
+    });
+}
 
-        setTimeout(() => {
-            convertAddress(lat, lon);
-        }, 300);
-
-    }); // ← EXIF.getData 닫기
-}       // ← readGPS 닫기
-
-/* DMS → 소수 좌표 */
+/* DMS → Decimal */
 function dmsToDecimal(dms, ref) {
-    let deg = dms[0];
-    let min = dms[1];
-    let sec = dms[2];
-
+    let deg = dms[0], min = dms[1], sec = dms[2];
     let dec = deg + min/60 + sec/3600;
     if (ref === "S" || ref === "W") dec = -dec;
     return dec;
 }
 
-/* 지도 렌더링 */
+/* 지도 표시 */
 function renderMap(lat, lon) {
     const container = document.getElementById("map");
 
-    // iPhone에서 layout 안정화
     requestAnimationFrame(() => {
         map = new kakao.maps.Map(container, {
             center: new kakao.maps.LatLng(lat, lon),
@@ -297,7 +213,6 @@ function renderMap(lat, lon) {
             position: new kakao.maps.LatLng(lat, lon)
         });
 
-        // 지도 크기 보정
         setTimeout(() => {
             map.relayout();
             map.setCenter(new kakao.maps.LatLng(lat, lon));
@@ -305,8 +220,7 @@ function renderMap(lat, lon) {
     });
 }
 
-
-/* 좌표 → 주소 */
+/* 주소 변환 */
 function convertAddress(lat, lon) {
     geocoder = new kakao.maps.services.Geocoder();
     geocoder.coord2Address(lon, lat, (result, status) => {
@@ -320,63 +234,23 @@ function convertAddress(lat, lon) {
     });
 }
 
-/* 다시 촬영 → 페이지 새로고침 (상태 꼬임 완전 방지) */
-document.getElementById("retry").onclick = () => {
-    location.reload();
-};
+document.getElementById("retry").onclick = () => location.reload();
 
-/* 주소 복사 */
 document.getElementById("copy").onclick = () => {
-    const road = document.getElementById("road").innerText;
-    const jibun = document.getElementById("jibun").innerText;
-    const text = `도로명: ${road}\n지번: ${jibun}`;
+    const text = `도로명: ${road.innerText}\n지번: ${jibun.innerText}`;
     navigator.clipboard.writeText(text);
     alert("주소가 복사되었습니다.");
 };
 
-/* service worker 등록 (설치만 가능하게, 강제업데이트 없음) */
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js");
-}
+document.getElementById("savePhotoBtn").onclick = () => {
+    if (!currentImageBase64) return alert("저장할 사진이 없습니다.");
+
+    const a = document.createElement("a");
+    a.href = currentImageBase64;
+    a.download = `photo_${Date.now()}.jpg`;
+    a.click();
+};
 </script>
-<!-- PWA 위치 권한 자동 요청 -->
-<script>
-// ⭐ PWA 감지
-const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
 
-// ⭐ 위치 권한 자동 요청 함수
-async function requestGeoPermission() {
-    if (!navigator.permissions) return;
-
-    try {
-        const perm = await navigator.permissions.query({ name: "geolocation" });
-
-        // 1) 권한 차단됨 → 안내 필요
-        if (perm.state === "denied") {
-            alert("⚠️ 위치 권한이 차단되어 있습니다.\n\n설정 → 앱 → 대형폐기물 위치공유 → 권한 → 위치 → 허용 으로 변경해주세요!");
-            return;
-        }
-
-        // 2) 권한 미정(prompt) → 자동 요청
-        if (perm.state === "prompt") {
-            navigator.geolocation.getCurrentPosition(
-                () => console.log("위치 권한 허용됨"),
-                () => console.warn("권한 요청 실패(사용자 취소)")
-            );
-        }
-
-        // 3) 권한 허용됨 → 아무것도 안 함
-    } catch (e) {
-        console.error("권한 체크 오류:", e);
-    }
-}
-
-// ⭐ 앱(PWA) 설치 모드일 때 자동 실행
-if (isPWA) {
-    setTimeout(() => {
-        requestGeoPermission();
-    }, 500);  // 앱 실행 후 0.5초 뒤 자동 요청
-}
-</script>
 </body>
 </html>
