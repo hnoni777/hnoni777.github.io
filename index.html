@@ -251,7 +251,7 @@ if (!latArr || !lonArr) {
             setTimeout(() => {
                 convertAddress(clat, clon);
             }, 300);
-        },
+        });
         (err) => {
             console.warn("실시간 GPS 실패:", err);
         }
