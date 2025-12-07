@@ -24,8 +24,8 @@
  "id": "/?source=pwa",
   "screenshots": [
   {
-    "src": "/screenshot.png",
-    "sizes": "1080x1920",
+    "src": "/intro.png",
+    "sizes": "970x2485",
     "type": "image/png",
     "form_factor": "narrow"
   }
