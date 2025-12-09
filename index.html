@@ -14,7 +14,7 @@
 <!-- 폰트 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
 
-<!-- Kakao Maps SDK (★ autoload 꺼야 iOS 정상 작동) -->
+<!-- Kakao Maps SDK (★ autoload=false → 아이폰 반드시 필요) -->
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c473f288616318b4fa69c041aaaed4c3&autoload=false&libraries=services"></script>
 
 <!-- EXIF -->
@@ -29,9 +29,11 @@ html, body {
 }
 
 #intro {
-  position: fixed; top: 0; left: 0;
+  position: fixed;
+  top: 0; left: 0;
   width: 100%; height: 100%;
-  z-index: 20; transition: opacity .3s;
+  z-index: 20;
+  transition: opacity .25s ease;
 }
 #intro img {
   width: 100%; height: 100%; object-fit: cover;
@@ -39,9 +41,11 @@ html, body {
 
 #main {
   width: 100%; height: 100%;
-  padding: 12px; box-sizing: border-box;
-  opacity: 0; pointer-events: none;
-  transition: opacity .3s;
+  padding: 12px;
+  box-sizing: border-box;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
 }
 
 #map {
@@ -56,10 +60,13 @@ html, body {
   margin-bottom: 10px; font-size: 15px;
 }
 
-#btnBox { display: flex; gap: 10px; margin-bottom: 10px; }
+#btnBox {
+  display: flex; gap: 10px; margin-bottom: 10px;
+}
 
 .btn {
-  flex: 1; padding: 7px 0;
+  flex: 1;
+  padding: 7px 0;
   font-size: 13px; font-weight: 700;
   background: #5c697b; color: #fff;
   border: none; border-radius: 10px;
@@ -106,17 +113,18 @@ html, body {
 let map, geocoder;
 let currentImageBase64 = null;
 
-/* 인트로 클릭 → 카메라 실행 */
+/* 📌 인트로 클릭 → 카메라 바로 실행 */
 document.getElementById("intro").onclick = () => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
-    input.capture = "environment"; // 후면 카메라
+    input.capture = "environment"; // 후면 카메라 강제
 
     input.onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
+        // 인트로 즉시 사라짐
         document.getElementById("intro").style.opacity = 0;
 
         setTimeout(() => {
@@ -126,34 +134,29 @@ document.getElementById("intro").onclick = () => {
             main.style.opacity = 1;
             main.style.pointerEvents = "auto";
 
-            loadPhoto(file, () => {
-                readGPS(file);
-            });
-        }, 300);
+            loadPhoto(file, () => readGPS(file));
+        }, 200);
     };
 
     input.click();
 };
 
-/* 사진 로드 후 GPS 시작 */
+/* 📌 사진 로드 → 즉시 GPS 분석 */
 function loadPhoto(file, callback) {
     const reader = new FileReader();
-    reader.onload = e => {
 
+    reader.onload = e => {
         currentImageBase64 = e.target.result;
         const img = document.getElementById("photo");
 
-        img.onload = () => {
-            // 아이폰 레이아웃 안정화 후 GPS 읽기
-            setTimeout(() => callback(), 120);
-        };
-
+        img.onload = () => callback(); // 딜레이 제거 → 즉시 GPS 분석
         img.src = currentImageBase64;
     };
+
     reader.readAsDataURL(file);
 }
 
-/* EXIF + 실시간 GPS */
+/* 📌 EXIF GPS → 없으면 실시간 GPS */
 function readGPS(file) {
     EXIF.getData(file, function() {
 
@@ -165,17 +168,13 @@ function readGPS(file) {
         // EXIF GPS 없음 → 실시간 GPS
         if (!latArr || !lonArr) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const lat = pos.coords.latitude;
-                    const lon = pos.coords.longitude;
-
-                    drawMap(lat, lon);
-                },
-                (err) => { console.warn("실시간 GPS 실패:", err); }
+                pos => drawMap(pos.coords.latitude, pos.coords.longitude),
+                err => console.warn("실시간 GPS 실패:", err)
             );
             return;
         }
 
+        // EXIF GPS 있음
         const lat = dmsToDecimal(latArr, latRef);
         const lon = dmsToDecimal(lonArr, lonRef);
 
@@ -183,15 +182,15 @@ function readGPS(file) {
     });
 }
 
-/* DMS → 십진수 변환 */
+/* DMS → 십진수 */
 function dmsToDecimal(dms, ref) {
     let deg = dms[0], min = dms[1], sec = dms[2];
-    let dec = deg + min/60 + sec/3600;
+    let dec = deg + min / 60 + sec / 3600;
     if (ref === "S" || ref === "W") dec = -dec;
     return dec;
 }
 
-/* 지도 + 주소 표시 */
+/* 📌 지도 즉시 렌더링(딜레이 없음) */
 function drawMap(lat, lon) {
     const container = document.getElementById("map");
 
@@ -206,42 +205,46 @@ function drawMap(lat, lon) {
 
             new kakao.maps.Marker({ map, position: pos });
 
-            setTimeout(() => {
-                map.relayout();
-                map.setCenter(pos);
-            }, 150);
+            // 딜레이 없이 즉시 렌더링
+            map.relayout();
+            map.setCenter(pos);
 
             convertAddress(lat, lon);
         });
     });
 }
 
-/* 좌표 → 주소 변환 */
+/* 좌표 → 주소 */
 function convertAddress(lat, lon) {
     geocoder = new kakao.maps.services.Geocoder();
-    geocoder.coord2Address(lon, lat, (result, status) => {
-        if (status === kakao.maps.services.Status.OK) {
-            document.getElementById("road").innerText =
-                result[0].road_address
-                ? result[0].road_address.address_name
-                : "없음";
 
-            document.getElementById("jibun").innerText =
-                result[0].address.address_name;
-        }
+    geocoder.coord2Address(lon, lat, (result, status) => {
+        if (status !== kakao.maps.services.Status.OK) return;
+
+        document.getElementById("road").innerText =
+            result[0].road_address
+            ? result[0].road_address.address_name
+            : "없음";
+
+        document.getElementById("jibun").innerText =
+            result[0].address.address_name;
     });
 }
 
+/* 다시 촬영 */
 document.getElementById("retry").onclick = () => location.reload();
 
+/* 주소 복사 */
 document.getElementById("copy").onclick = () => {
-    const t = `도로명: ${road.innerText}\n지번: ${jibun.innerText}`;
-    navigator.clipboard.writeText(t);
+    const txt = `도로명: ${road.innerText}\n지번: ${jibun.innerText}`;
+    navigator.clipboard.writeText(txt);
     alert("주소가 복사되었습니다!");
 };
 
+/* 사진 저장 */
 document.getElementById("savePhotoBtn").onclick = () => {
     if (!currentImageBase64) return alert("저장할 사진이 없습니다.");
+
     const a = document.createElement("a");
     a.href = currentImageBase64;
     a.download = `photo_${Date.now()}.jpg`;
